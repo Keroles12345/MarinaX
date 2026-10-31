@@ -34,6 +34,7 @@ class DashboardLocaleTest extends TestCase
             'views/admin/layouts/app.blade.php',
             'views/admin/pages/companies.blade.php',
             'views/admin/pages/accounts.blade.php',
+            'views/admin/pages/accounts_tree.blade.php',
             'views/admin/pages/dashboard.blade.php',
             'views/staff/main.blade.php',
             'views/staff/layout/head.blade.php',
@@ -56,19 +57,48 @@ class DashboardLocaleTest extends TestCase
         $this->assertSame(count($templates), $compiledTemplates);
     }
 
+    public function test_account_tree_template_renders_without_blade_parsing_javascript_template_literals(): void
+    {
+        $template = \App\Support\DashboardTemplateTranslator::compile(
+            file_get_contents(resource_path('views/admin/pages/accounts_tree.blade.php'))
+        );
+        $template = preg_replace('/^@extends\([\'"]admin\.layouts\.app[\'"]\)\s*/', '', $template);
+        $compiled = app('blade.compiler')->compileString($template);
+
+        $user = (object) ['role' => 'viewer'];
+        $__env = app('view');
+        app()->setLocale('en');
+        ob_start();
+        eval('?>'.$compiled);
+        $rendered = ob_get_clean().$__env->yieldContent('scripts');
+        app()->setLocale('ar');
+
+        $this->assertStringContainsString('onclick="toggleNext(this)"', $rendered);
+        $this->assertStringContainsString('CAN_MANAGE_ACCOUNTS = false', $rendered);
+        $this->assertStringContainsString('Opening credit', $rendered);
+        $this->assertStringContainsString('Opening debit', $rendered);
+        $this->assertStringContainsString('Balanced', $rendered);
+        $this->assertStringContainsString('treeText(count === 1 ? "account" : "accounts")', $rendered);
+    }
+
     public function test_client_translations_include_dashboard_messages(): void
     {
         $translations = \App\Support\DashboardTemplateTranslator::clientTranslations();
 
         $this->assertSame('No results', $translations['لا توجد نتائج']);
         $this->assertSame('Hide sidebar', $translations['إخفاء القائمة الجانبية']);
+        $this->assertSame('Operating revenue', $translations['إيرادات التشغيل']);
+        $this->assertSame('Long-term liabilities', $translations['خصوم طويلة الأجل']);
+        $this->assertSame('accounts', $translations['حسابات']);
+        $this->assertSame('Edit account details', $translations['تعديل تفاصيل الشركة']);
+        $this->assertSame('Unable to load account tree data', $translations['تعذر تحميل بيانات شجرة الحسابات']);
     }
 
     public function test_dashboard_blade_text_and_javascript_literals_are_translated_at_compile_time(): void
     {
         $template = <<<'BLADE'
 @extends('admin.layouts.app')
-<section><h2>حفظ الشركة</h2><input placeholder="اسم الشركة"><form onsubmit="return confirm('هل تريد المتابعة؟')"></form><ul>@foreach(['عادي', 'تسوية'] as $type)<li>{{ $type }}</li>@endforeach</ul><script>const empty = 'لا توجد نتائج'; const summary = `لا توجد بيانات: ${count}`;</script></section>
+<section><h2>حفظ الشركة</h2><input placeholder="اسم الشركة"><form onsubmit="return confirm('هل تريد المتابعة؟')"></form><ul>@foreach(['عادي', 'تسوية'] as $type)<li>{{ $type }}</li>@endforeach</ul><script>const empty = 'لا توجد نتائج'; const summary = `لا توجد بيانات: ${count}`; const nested = `<div>${items.map(item => `<span>لا توجد نتائج: ${item.name}</span>`).join('')}</div>`;</script></section>
 BLADE;
 
         $translatedTemplate = \App\Support\DashboardTemplateTranslator::compile($template);
@@ -94,6 +124,7 @@ BLADE;
         $this->assertStringContainsString('No results', $rendered);
         $this->assertStringContainsString('confirm(\'Do you want to continue?\')', $rendered);
         $this->assertStringContainsString('No data available:', $rendered);
+        $this->assertStringContainsString('${"\u003Cspan\u003ENo results: "}${item.name}</span>', $rendered);
         $this->assertStringContainsString('<li>Regular</li><li>Adjustment</li>', $rendered);
     }
 }

@@ -241,38 +241,146 @@ class DashboardTemplateTranslator
 
     private static function translateScript(string $script): string
     {
-        $script = preg_replace_callback(
-            '/([\'"])([^\'"\r\n]*\p{Arabic}[^\'"\r\n]*)\1/u',
-            static function (array $matches) use ($script): string {
-                if (str_contains($matches[2], '{{') || str_contains($matches[2], '$')) {
-                    return $matches[0];
+        $index = 0;
+
+        return self::translateJavaScriptCode($script, $index);
+    }
+
+    private static function translateJavaScriptCode(string $script, int &$index, bool $stopAtClosingBrace = false): string
+    {
+        $length = strlen($script);
+        $translated = '';
+        $braceDepth = 0;
+
+        while ($index < $length) {
+            if ($script[$index] === "'" || $script[$index] === '"') {
+                $end = self::quotedStringEnd($script, $index);
+                $literal = substr($script, $index, $end - $index);
+                $contents = substr($literal, 1, -1);
+                $before = substr($script, max(0, $index - 8), min(8, $index));
+                if (preg_match('/\p{Arabic}/u', $contents)
+                    && ! str_contains($contents, '{{')
+                    && ! str_contains($contents, '$')
+                    && ! str_contains($before, '__(')) {
+                    $translated .= self::jsonExpression($contents);
+                } else {
+                    $translated .= $literal;
                 }
-
-                $position = strpos($script, $matches[0]);
-                $before = $position === false ? '' : substr($script, max(0, $position - 8), 8);
-                if (str_contains($before, '__(')) {
-                    return $matches[0];
-                }
-
-                return '@json('.self::phpExpression($matches[2]).')';
-            },
-            $script
-        ) ?? $script;
-
-        return preg_replace_callback('/`([^`]*\p{Arabic}[^`]*)`/us', static function (array $matches): string {
-            $parts = preg_split('/(\$\{.*?\})/s', $matches[1], -1, PREG_SPLIT_DELIM_CAPTURE);
-            if ($parts === false) {
-                return $matches[0];
+                $index = $end;
+                continue;
             }
 
-            foreach ($parts as $index => $part) {
-                if ($index % 2 === 0 && preg_match('/\p{Arabic}/u', $part)) {
-                    $parts[$index] = '${@json('.self::phpExpression($part).')}';
-                }
+            if (substr($script, $index, 2) === '//') {
+                $end = strpos($script, "\n", $index + 2);
+                $end = $end === false ? $length : $end;
+                $translated .= substr($script, $index, $end - $index);
+                $index = $end;
+                continue;
             }
 
-            return '`'.implode('', $parts).'`';
-        }, $script) ?? $script;
+            if (substr($script, $index, 2) === '/*') {
+                $end = strpos($script, '*/', $index + 2);
+                $end = $end === false ? $length : $end + 2;
+                $translated .= substr($script, $index, $end - $index);
+                $index = $end;
+                continue;
+            }
+
+            if ($script[$index] === '`') {
+                $translated .= self::translateTemplateLiteral($script, $index);
+                continue;
+            }
+
+            if ($stopAtClosingBrace && $script[$index] === '}') {
+                if ($braceDepth === 0) {
+                    $translated .= '}';
+                    $index++;
+
+                    return $translated;
+                }
+
+                $braceDepth--;
+            } elseif ($stopAtClosingBrace && $script[$index] === '{') {
+                $braceDepth++;
+            }
+
+            $translated .= $script[$index];
+            $index++;
+        }
+
+        return $translated;
+    }
+
+    private static function translateTemplateLiteral(string $script, int &$index): string
+    {
+        $length = strlen($script);
+        $translated = '`';
+        $text = '';
+        $index++;
+
+        while ($index < $length) {
+            if ($script[$index] === '\\' && $index + 1 < $length) {
+                $text .= substr($script, $index, 2);
+                $index += 2;
+                continue;
+            }
+
+            if ($script[$index] === '`') {
+                $translated .= self::translateTemplateText($text).'`';
+                $index++;
+
+                return $translated;
+            }
+
+            if (substr($script, $index, 2) === '${') {
+                $translated .= self::translateTemplateText($text).'${';
+                $text = '';
+                $index += 2;
+                $translated .= self::translateJavaScriptCode($script, $index, true);
+                continue;
+            }
+
+            $text .= $script[$index];
+            $index++;
+        }
+
+        return $translated.$text;
+    }
+
+    private static function quotedStringEnd(string $script, int $index): int
+    {
+        $quote = $script[$index];
+        $length = strlen($script);
+        $index++;
+
+        while ($index < $length) {
+            if ($script[$index] === '\\') {
+                $index += 2;
+                continue;
+            }
+
+            if ($script[$index] === $quote) {
+                return $index + 1;
+            }
+
+            $index++;
+        }
+
+        return $length;
+    }
+
+    private static function translateTemplateText(string $text): string
+    {
+        if (! preg_match('/\p{Arabic}/u', $text)) {
+            return $text;
+        }
+
+        return '${'.self::jsonExpression($text).'}';
+    }
+
+    private static function jsonExpression(string $text): string
+    {
+        return '<?php echo json_encode('.self::phpExpression($text).', 15, 512); ?>';
     }
 
     private static function expression(string $text): string

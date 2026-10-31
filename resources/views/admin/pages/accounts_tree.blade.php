@@ -23,6 +23,11 @@
 @section('scripts')
 <script>
 let TREE = [];
+@if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
+const CAN_MANAGE_ACCOUNTS = true;
+@else
+const CAN_MANAGE_ACCOUNTS = false;
+@endif
 
 async function loadTree() {
   try {
@@ -44,8 +49,8 @@ function renderTree(tree) {
       <div class="tree-row" onclick="toggleNext(this)">
         <span class="tw-arrow">▾</span>
         <span class="tw-icon">📁</span>
-        <b>${esc(typeNode.type)}</b>
-        <span class="tw-count">${countChildren(typeNode)} حساب</span>
+        <b>${esc(treeText(typeNode.type))}</b>
+        <span class="tw-count">${formatAccountCount(countChildren(typeNode))}</span>
       </div>
       <div class="tree-children">
         ${typeNode.children.map(g => `
@@ -53,8 +58,8 @@ function renderTree(tree) {
             <div class="tree-row" onclick="toggleNext(this)">
               <span class="tw-arrow">▾</span>
               <span class="tw-icon">🗂️</span>
-              <b>${esc(g.label)}</b>
-              <span class="tw-count">${g.children.reduce((count, account) => count + 1 + (account.tree_children?.length || 0), 0)} حساب</span>
+              <b>${esc(treeText(g.label))}</b>
+              <span class="tw-count">${formatAccountCount(g.children.reduce((count, account) => count + 1 + (account.tree_children?.length || 0), 0))}</span>
             </div>
             <div class="tree-children">
               ${g.children.map(renderAccountNode).join('')}
@@ -90,15 +95,23 @@ function renderAccountNode(account) {
         <span class="tw-budget">${openingLabel}: ${fmt(Math.abs(openingBalance))}</span>
         <span class="tw-budget">الرصيد الحالي ${currentSide}: ${fmt(Math.abs(currentBalance))}</span>
         ${account.budget > 0 ? `<span class="tw-budget">ميزانية: ${fmt(account.budget)}</span>` : ''}
-        @if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
+        ${CAN_MANAGE_ACCOUNTS ? `
         <span class="tree-act">
           <button class="btn btn-sm btn-dark act-btn" title="تعديل تفاصيل الشركة" onclick='event.stopPropagation(); editAcc(${editData})'>✏️</button>
           ${isProtectedAccount ? '<span class="tree-act hint">حساب أساسي مشترك</span>' : `<button class="btn btn-sm btn-red act-btn" title="حذف" onclick="event.stopPropagation(); delTreeAcc(${account.id}, '${esc(account.acc_no)}')">🗑️</button>`}
         </span>
-        @endif
+        ` : ''}
       </div>
       ${children.length ? `<div class="tree-children">${children.map(renderAccountNode).join('')}</div>` : ''}
     </div>`;
+}
+
+function treeText(value) {
+  return window.dashboardTranslate ? window.dashboardTranslate(value) : value;
+}
+
+function formatAccountCount(count) {
+  return `${count} ${treeText(count === 1 ? 'حساب' : 'حسابات')}`;
 }
 
 function countChildren(node) {
@@ -114,19 +127,31 @@ function toggleNext(row) {
   const isHidden = kids.style.display === 'none';
   kids.style.display = isHidden ? '' : 'none';
   const arrow = row.querySelector('.tw-arrow');
-  if (arrow) arrow.textContent = isHidden ? '▾' : '▸';
+  if (arrow) {
+    arrow.textContent = isHidden ? '▾' : '▸';
+    arrow.classList.toggle('tw-collapsed', !isHidden);
+  }
 }
 
 function expandAll() {
   document.querySelectorAll('.tree-children').forEach(c => c.style.display = '');
-  document.querySelectorAll('.tw-arrow').forEach(a => a.textContent = '▾');
+  document.querySelectorAll('.tw-arrow:not(.tw-leaf)').forEach(a => {
+    a.textContent = '▾';
+    a.classList.remove('tw-collapsed');
+  });
 }
 
 function collapseAll() {
   document.querySelectorAll('.tree .tree-type > .tree-children').forEach(c => { c.style.display = ''; });
   document.querySelectorAll('.tree-children .tree-children').forEach(c => c.style.display = 'none');
-  document.querySelectorAll('.tw-arrow').forEach(a => a.textContent = '▸');
-  document.querySelectorAll('.tree-type > .tree-row .tw-arrow').forEach(a => a.textContent = '▾');
+  document.querySelectorAll('.tw-arrow:not(.tw-leaf)').forEach(a => {
+    a.textContent = '▸';
+    a.classList.add('tw-collapsed');
+  });
+  document.querySelectorAll('.tree-type > .tree-row .tw-arrow').forEach(a => {
+    a.textContent = '▾';
+    a.classList.remove('tw-collapsed');
+  });
 }
 
 function editAcc(a) {
@@ -134,7 +159,7 @@ function editAcc(a) {
 }
 
 async function delTreeAcc(id, no) {
-  if (!await confirmDlg(`حذف الحساب ${no}؟ لا يمكن الحذف إذا كان له حركات.`)) return;
+  if (!await confirmDlg(`${treeText('حذف الحساب')} ${no}؟ ${treeText('لا يمكن الحذف إذا كان له حركات.')}`)) return;
   try { await api('/api/accounts/' + id, { method: 'DELETE' }); toast('تم حذف الحساب'); loadTree(); }
   catch (e) { toast(e.message, 'err'); }
 }
@@ -144,7 +169,7 @@ async function wipeTree() {
   if (!await confirmDlg('تأكيد أخير: نفّذ المسح الآن؟ لا يمكن التراجع عن القيود إلا بالنسخ الاحتياطي')) return;
   try {
     const d = await api('/api/accounts/wipe', { method: 'POST' });
-    toast(`تم مسح ${d.deleted_accounts} حساب مخصص و${d.deleted_entries} قيد مع الحفاظ على الحسابات الأساسية`);
+    toast(`${treeText('تم مسح')} ${d.deleted_accounts} ${treeText('حسابات مخصصة')} ${treeText('و')} ${d.deleted_entries} ${treeText('قيود')} ${treeText('مع الحفاظ على الحسابات الأساسية')}`);
     loadTree();
   } catch (e) { toast(e.message, 'err'); }
 }

@@ -90,6 +90,11 @@
 @section('scripts')
 <script>
 let ACCOUNTS = [];
+@if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
+const CAN_MANAGE_ACCOUNTS = true;
+@else
+const CAN_MANAGE_ACCOUNTS = false;
+@endif
 
 async function load() {
   try {
@@ -114,10 +119,10 @@ function render(list) {
       <td class="num">${fmt(Math.abs(Number(a.current_balance || 0)))} <span class="hint">${accountBalanceSide(a.current_balance)}${a.current_balance_includes_children ? ' · يشمل الفروع' : ''}</span></td>
       <td class="num ${a.budget > 0 ? 'budget-cell' : ''}">${a.budget > 0 ? fmt(a.budget) : '<span class="badge gray">—</span>'}</td>
       <td class="num">
-        @if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
+        ${CAN_MANAGE_ACCOUNTS ? `
         <button class="btn btn-sm btn-dark act-btn" title="تعديل" onclick='editAcc(${JSON.stringify({id:a.id, acc_no:a.acc_no, name:a.name, type:a.type, opening_balance:a.opening_balance, budget:a.budget, is_system:a.is_system})})'>✏️</button>
         ${a.is_system ? '' : `<button class="btn btn-sm btn-red act-btn" title="حذف" onclick="delAcc(${a.id}, '${esc(a.acc_no)}')">🗑️</button>`}
-        @endif
+        ` : ''}
       </td>
     </tr>`).join('');
 }
