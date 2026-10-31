@@ -151,7 +151,7 @@ class DashboardTemplateTranslator
 
             return preg_replace_callback(
                 '/([\'"])([^\'"\r\n]*\p{Arabic}[^\'"\r\n]*)\1/u',
-                static fn (array $literal): string => self::expression($literal[2]),
+                static fn (array $literal): string => self::phpExpression($literal[2]),
                 $matches[0]
             );
         }, $source) ?? $source;

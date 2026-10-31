@@ -50,7 +50,8 @@ class DashboardLocaleTest extends TestCase
 
         $compiledTemplates = 0;
         foreach ($templates as $template) {
-            app('blade.compiler')->compileString(file_get_contents(resource_path($template)));
+            $compiled = app('blade.compiler')->compileString(file_get_contents(resource_path($template)));
+            token_get_all($compiled, TOKEN_PARSE);
             $compiledTemplates++;
         }
 
@@ -79,6 +80,33 @@ class DashboardLocaleTest extends TestCase
         $this->assertStringContainsString('Opening debit', $rendered);
         $this->assertStringContainsString('Balanced', $rendered);
         $this->assertStringContainsString('treeText(count === 1 ? "account" : "accounts")', $rendered);
+    }
+
+    public function test_blade_expression_string_literals_are_translated_without_nested_blade_echoes(): void
+    {
+        $template = <<<'BLADE'
+@extends('superadmin.layout')
+<span>{{ $tenant->status ? 'نشطة' : 'موقوفة' }}</span>
+BLADE;
+        $template = \App\Support\DashboardTemplateTranslator::compile($template);
+        $template = preg_replace('/^@extends\([\'"]superadmin\.layout[\'"]\)\s*/', '', $template);
+        $compiled = app('blade.compiler')->compileString($template);
+
+        app()->setLocale('en');
+        $__env = app('view');
+        $tenant = (object) ['status' => true];
+        ob_start();
+        eval('?>'.$compiled);
+        $active = ob_get_clean();
+
+        $tenant->status = false;
+        ob_start();
+        eval('?>'.$compiled);
+        $suspended = ob_get_clean();
+        app()->setLocale('ar');
+
+        $this->assertSame('<span>Active</span>', $active);
+        $this->assertSame('<span>Suspended</span>', $suspended);
     }
 
     public function test_client_translations_include_dashboard_messages(): void
