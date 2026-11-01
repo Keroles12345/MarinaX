@@ -42,7 +42,8 @@ class OperationAssignmentController extends Controller
             ->when($request->filled('search'), fn ($q) => $q->where('operations.booking_id', 'like', '%' . $request->input('search') . '%'))
             ->orderByDesc('operation_assignments.assign_date')->orderByDesc('operation_assignments.id');
 
-        $assignments = $query->paginate(15)->withQueryString();
+        $perPage = 10;
+        $assignments = $query->paginate($perPage)->withQueryString();
         $operationIds = $assignments->getCollection()->pluck('operation_id')->unique();
         $boatIds = $assignments->getCollection()->where('type', 'boat')->pluck('resource_id')->unique();
         $vehicleIds = $assignments->getCollection()->where('type', 'vehicle')->pluck('resource_id')->unique();
@@ -68,6 +69,35 @@ class OperationAssignmentController extends Controller
             'boat' => Boat_Driver::whereIn('id', $boatDriverIds)->pluck('name', 'id'),
             'vehicle' => Drive::whereIn('id', $vehicleDriverIds)->pluck('name', 'id'),
         ];
+        if ($request->expectsJson()) {
+            $currentPage = $assignments->currentPage();
+            $previousOperationId = null;
+            if ($currentPage > 1) {
+                $previousOperationId = (clone $query)
+                    ->select('operation_assignments.operation_id')
+                    ->offset(($currentPage - 1) * $perPage - 1)
+                    ->limit(1)
+                    ->value('operation_assignments.operation_id');
+            }
+
+            return response()->json([
+                'html' => view('staff.operation-assignments.partials.rows', compact(
+                    'assignments',
+                    'resourceNames',
+                    'driverNames',
+                    'externalOperationIds',
+                    'previousOperationId',
+                ))->render(),
+                'nextPageUrl' => $assignments->nextPageUrl(),
+                'hasMore' => $assignments->hasMorePages(),
+                'summary' => __('عرض :from إلى :to من أصل :total سجل', [
+                    'from' => number_format($assignments->firstItem()),
+                    'to' => number_format($assignments->lastItem()),
+                    'total' => number_format($assignments->total()),
+                ]),
+            ]);
+        }
+
         $regions = \App\Support\TenantDatabase::table('regions')
             ->whereIn('id', StaffRegionAccess::regionIds(Auth::guard('staff')->user()))
             ->where('is_active', true)

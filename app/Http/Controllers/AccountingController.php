@@ -172,8 +172,23 @@ class AccountingController extends Controller
             $query->whereDate('at', '<=', $filters['to']);
         }
 
+        $logs = $query->orderByDesc('id')->paginate(10)->withQueryString();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'html' => view('admin.pages.partials.audit-rows', compact('logs'))->render(),
+                'nextPageUrl' => $logs->nextPageUrl(),
+                'hasMore' => $logs->hasMorePages(),
+                'summary' => __('عرض :from إلى :to من أصل :total عملية', [
+                    'from' => number_format($logs->firstItem()),
+                    'to' => number_format($logs->lastItem()),
+                    'total' => number_format($logs->total()),
+                ]),
+            ]);
+        }
+
         return view('admin.pages.audit', $this->viewData([
-            'logs' => $query->orderByDesc('id')->paginate(50)->withQueryString(),
+            'logs' => $logs,
             'filters' => $filters,
         ]));
     }

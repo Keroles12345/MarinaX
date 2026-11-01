@@ -309,6 +309,51 @@ textarea { resize: vertical; min-height: 64px; }
 .panel-head h3 { font-size: 15.5px; font-weight: 700; flex: 1; }
 .panel-body { padding: 20px; }
 
+.audit-load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  transition: background .2s, border-color .2s;
+}
+.audit-load-more.is-loading {
+  border-top-color: rgba(45,212,191,.45);
+  background: rgba(45,212,191,.035);
+}
+.revenue-infinite-scroll { background: #fff; color: #667085; }
+.revenue-infinite-scroll.is-loading { background: #f2fbf9; }
+.audit-pagination-summary { font-size: 13px; text-align: center; }
+.audit-load-message {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 22px;
+  font-size: 13px;
+  text-align: center;
+}
+.audit-loading-spinner {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 2px solid rgba(45,212,191,.25);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: audit-spin .7s linear infinite;
+}
+.audit-loading-spinner[hidden] { display: none; }
+@keyframes audit-spin { to { transform: rotate(360deg); } }
+.audit-load-button { min-width: 150px; }
+.audit-load-button:disabled { cursor: wait; }
+.audit-load-sentinel { width: 100%; height: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  .audit-loading-spinner { animation: none; }
+}
+
 /* ============ الجداول ============ */
 .tbl-wrap { overflow-x: auto; }
 table.tbl {

@@ -83,23 +83,45 @@
     <div class="boat-revenue-scroll">
       <table class="boat-revenue-table">
         <thead><tr><th>التاريخ</th><th>رقم الحجز</th><th>رقم الحركة</th><th>البيان</th><th>الإيراد</th></tr></thead>
-        <tbody>
-          @forelse($entries as $entry)
-            <tr>
-              <td>{{ $entry->entry_date }}</td>
-              <td>{{ $entry->booking_id ?? '—' }}</td>
-              <td>{{ $entry->movement_no }}</td>
-              <td>{{ $entry->description ?: '—' }}</td>
-              <td>{{ number_format((float) $entry->revenue_amount, 2) }} ج.م</td>
-            </tr>
-          @empty
+        <tbody id="boat-revenue-rows">
+          @if($entries->isEmpty())
             <tr><td colspan="5" class="hint">لا توجد إيرادات مرحلة لهذا المركب في الفترة المحددة.</td></tr>
-          @endforelse
+          @else
+            @include('admin.pages.partials.boat-revenue-rows', ['entries' => $entries])
+          @endif
         </tbody>
       </table>
     </div>
     @if($entries instanceof \Illuminate\Contracts\Pagination\Paginator)
-      <div style="margin-top:14px">{{ $entries->links() }}</div>
+      <div
+        class="infinite-scroll audit-load-more revenue-infinite-scroll"
+        data-infinite-scroll
+        data-rows="#boat-revenue-rows"
+        data-summary="#boat-revenue-summary"
+        data-next-page="{{ $entries->nextPageUrl() }}"
+        data-has-more="{{ $entries->hasMorePages() ? 'true' : 'false' }}"
+        data-loading-text="{{ __('جاري تحميل المزيد...') }}"
+        data-more-text="{{ __('تحميل المزيد') }}"
+        data-retry-text="{{ __('تعذّر تحميل السجلات. حاول مرة أخرى.') }}"
+        data-end-text="{{ __('تم تحميل كل النتائج') }}"
+        role="status"
+        aria-live="polite"
+        dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
+      >
+        <p class="audit-pagination-summary" id="boat-revenue-summary">
+          {{ __('عرض :from إلى :to من أصل :total سجل', [
+            'from' => number_format($entries->firstItem()),
+            'to' => number_format($entries->lastItem()),
+            'total' => number_format($entries->total()),
+          ]) }}
+        </p>
+        <span class="audit-load-message" data-load-message>
+          <span class="audit-loading-spinner" data-load-spinner aria-hidden="true" hidden></span>
+          <span data-load-message-text></span>
+        </span>
+        <button class="btn btn-dark audit-load-button" data-load-more-button type="button">{{ __('تحميل المزيد') }}</button>
+        <span class="audit-load-sentinel" data-load-sentinel aria-hidden="true"></span>
+      </div>
     @endif
   </div>
 @else

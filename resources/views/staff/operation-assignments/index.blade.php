@@ -132,53 +132,41 @@
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500"><tr><th class="px-5 py-3"><input id="check-all-operations" type="checkbox" aria-label="تحديد كل العمليات القابلة للترحيل"></th><th class="px-5 py-3">Booking / trip</th><th class="px-5 py-3">Assigned resource</th><th class="px-5 py-3">Driver</th><th class="px-5 py-3">Assignment date</th><th class="px-5 py-3 text-right">Operation amount</th><th class="px-5 py-3">Accounting</th><th class="px-5 py-3 text-right">Actions</th></tr></thead>
-            <tbody class="divide-y divide-slate-100">
-            @php($seenOperationIds = [])
-            @forelse($assignments as $assignment)
-                @php($isFirstAssignment = !in_array((int) $assignment->operation_id, $seenOperationIds, true))
-                @php($isExternalOperation = in_array((int) $assignment->operation_id, $externalOperationIds, true))
-                @if($isFirstAssignment) @php($seenOperationIds[] = (int) $assignment->operation_id) @endif
-                <tr class="hover:bg-slate-50/70">
-                    <td class="px-5 py-4">
-                        @if($isFirstAssignment && !$assignment->accounting_entry_id && $assignment->operation_status === 'complete' && (float) $assignment->totalamount > 0)
-                            <input class="operation-checkbox rounded border-slate-300 text-teal-700 focus:ring-teal-600" type="checkbox" form="accounting-form" name="operation_ids[]" value="{{ $assignment->operation_id }}" aria-label="تحديد العملية {{ $assignment->booking_id }}">
-                        @elseif(!$isFirstAssignment)
-                            <span class="text-xs text-slate-400">—</span>
-                        @endif
-                    </td>
-                    <td class="whitespace-nowrap px-5 py-4"><span class="font-semibold text-slate-900">{{ $assignment->booking_id }}</span><span class="mt-1 block text-xs text-slate-500">Trip {{ \Illuminate\Support\Carbon::parse($assignment->trip_date)->format('M j, Y') }} · {{ $assignment->time_pickup ?: $assignment->trip_time }}</span></td>
-                    <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $assignment->type === 'boat' ? 'bg-sky-50 text-sky-700' : 'bg-violet-50 text-violet-700' }}">{{ ucfirst($assignment->type) }}</span><span class="ml-2 font-medium text-slate-800">{{ $resourceNames[$assignment->type . ':' . $assignment->resource_id] ?? 'Resource #' . $assignment->resource_id }}</span>
-                        @if($isExternalOperation)<span class="mt-2 block w-fit rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">مركب خارجي</span>@endif
-                    </td>
-                    <td class="px-5 py-4 text-slate-700">{{ $driverNames[$assignment->type][$assignment->driver_id] ?? 'Not assigned' }}</td>
-                    <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ $assignment->assign_date->format('M j, Y') }}</td>
-                    <td class="whitespace-nowrap px-5 py-4 text-right font-semibold text-slate-800">{{ number_format((float) $assignment->totalamount, 2) }} <span class="text-xs font-normal text-slate-500">EGP</span></td>
-                    <td class="px-5 py-4">
-                        @if($assignment->accounting_entry_id)
-                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">مرحّلة</span>
-                            <span class="mt-1 block text-xs text-slate-500">قيد #{{ $assignment->accounting_entry_id }}</span>
-                        @elseif(!$isFirstAssignment)
-                            <span class="text-xs text-slate-500">عملية واحدة — مورد متعدد</span>
-                        @elseif((float) $assignment->totalamount <= 0)
-                            <span class="text-xs text-rose-700">لا يوجد مبلغ للترحيل</span>
-                        @elseif($assignment->operation_status !== 'complete')
-                            <span class="text-xs text-slate-500">العملية غير مكتملة</span>
-                        @else
-                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">بانتظار المراجعة</span>
-                        @endif
-                    </td>
-                    <td class="whitespace-nowrap px-5 py-4">
-                        @if($assignment->accounting_entry_id)
-                            <span class="text-xs text-slate-500">مقفلة بعد الترحيل</span>
-                        @else
-                            <div class="flex justify-end gap-2"><a href="{{ route('operation-assignments.edit', $assignment) }}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-700">Edit</a><form method="POST" action="{{ route('operation-assignments.destroy', $assignment) }}" onsubmit="return confirm('Delete this assignment? This cannot be undone.')">@csrf @method('DELETE')<button class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">Delete</button></form></div>
-                        @endif
-                    </td>
-                </tr>
-            @empty<tr><td colspan="8" class="px-5 py-14 text-center"><div class="text-3xl">▤</div><p class="mt-3 font-semibold text-slate-800">No assignments found</p><p class="mt-1 text-sm text-slate-500">Create an assignment or adjust your filters.</p></td></tr>@endforelse
+            <tbody id="operation-assignment-rows" class="divide-y divide-slate-100">
+            @if($assignments->isEmpty())
+                <tr><td colspan="8" class="px-5 py-14 text-center"><div class="text-3xl">▤</div><p class="mt-3 font-semibold text-slate-800">No assignments found</p><p class="mt-1 text-sm text-slate-500">Create an assignment or adjust your filters.</p></td></tr>
+            @else
+                @include('staff.operation-assignments.partials.rows', ['previousOperationId' => null])
+            @endif
             </tbody>
         </table></div>
-        @if($assignments->hasPages())<div class="border-t border-slate-100 px-5 py-4">{{ $assignments->links() }}</div>@endif
+        <div
+            class="infinite-scroll mt-4 flex min-h-20 flex-col items-center justify-center gap-2 border-t border-slate-100 px-5 py-4 text-sm text-slate-500"
+            data-infinite-scroll
+            data-rows="#operation-assignment-rows"
+            data-summary="#operation-assignment-summary"
+            data-next-page="{{ $assignments->nextPageUrl() }}"
+            data-has-more="{{ $assignments->hasMorePages() ? 'true' : 'false' }}"
+            data-loading-text="{{ __('جاري تحميل المزيد...') }}"
+            data-more-text="{{ __('تحميل المزيد') }}"
+            data-retry-text="{{ __('تعذّر تحميل السجلات. حاول مرة أخرى.') }}"
+            data-end-text="{{ __('تم تحميل كل النتائج') }}"
+            role="status"
+            aria-live="polite"
+            dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
+        >
+            <p id="operation-assignment-summary">{{ __('عرض :from إلى :to من أصل :total سجل', [
+                'from' => number_format($assignments->firstItem() ?? 0),
+                'to' => number_format($assignments->lastItem() ?? 0),
+                'total' => number_format($assignments->total()),
+            ]) }}</p>
+            <span class="flex min-h-5 items-center gap-2" data-load-message role="status" aria-live="polite">
+                <span class="h-4 w-4 rounded-full border-2 border-teal-200 border-t-teal-700 motion-safe:animate-spin" data-load-spinner aria-hidden="true" hidden></span>
+                <span data-load-message-text></span>
+            </span>
+            <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60" data-load-more-button type="button">{{ __('تحميل المزيد') }}</button>
+            <span class="h-px w-full" data-load-sentinel aria-hidden="true"></span>
+        </div>
     </div>
 </div>
 <script>

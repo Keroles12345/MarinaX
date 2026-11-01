@@ -72,7 +72,19 @@ class BoatRevenueController extends Controller
                 ->orderByDesc('entries.id');
 
                 $revenueTotal = round((float) (clone $entriesQuery)->sum(DB::raw('lines.credit - lines.debit')), 2);
-                $entries = $entriesQuery->paginate(30)->withQueryString();
+                $entries = $entriesQuery->paginate(10)->withQueryString();
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'html' => view('admin.pages.partials.boat-revenue-rows', compact('entries'))->render(),
+                        'nextPageUrl' => $entries->nextPageUrl(),
+                        'hasMore' => $entries->hasMorePages(),
+                        'summary' => __('عرض :from إلى :to من أصل :total سجل', [
+                            'from' => number_format($entries->firstItem()),
+                            'to' => number_format($entries->lastItem()),
+                            'total' => number_format($entries->total()),
+                        ]),
+                    ]);
+                }
             }
         }
 

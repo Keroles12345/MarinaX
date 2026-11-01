@@ -267,6 +267,7 @@
   });
 })();
 </script>
+<script src="{{ asset('js/infinite-scroll.js') }}"></script>
 @yield('scripts')
 </body>
 </html>
