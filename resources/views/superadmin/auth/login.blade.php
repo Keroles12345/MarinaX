@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,6 +24,7 @@
 </head>
 <body>
 <main class="login-card">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">@include('shared.language-switcher')</div>
     <div class="login-mark" aria-hidden="true">◆</div>
     <h1>دخول مدير النظام</h1>
     <p class="login-subtitle">لوحة مستقلة لإدارة الشركات ومستخدمي النظام.</p>

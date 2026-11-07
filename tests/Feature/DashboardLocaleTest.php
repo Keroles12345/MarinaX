@@ -22,6 +22,17 @@ class DashboardLocaleTest extends TestCase
         $this->assertSame('en', app()->getLocale());
     }
 
+    public function test_standalone_superadmin_login_page_is_translated_and_has_a_language_switcher(): void
+    {
+        $this->withSession(['locale' => 'en'])
+            ->get('/superadmin')
+            ->assertOk()
+            ->assertSee('lang="en"', false)
+            ->assertSee('System Administrator Login')
+            ->assertSee('A dedicated dashboard for managing companies and system users.')
+            ->assertSee('/locale');
+    }
+
     public function test_only_supported_locales_can_be_selected(): void
     {
         $this->from('/')->post('/locale', ['locale' => 'fr'])
@@ -60,9 +71,7 @@ class DashboardLocaleTest extends TestCase
 
     public function test_account_tree_template_renders_without_blade_parsing_javascript_template_literals(): void
     {
-        $template = \App\Support\DashboardTemplateTranslator::compile(
-            file_get_contents(resource_path('views/admin/pages/accounts_tree.blade.php'))
-        );
+        $template = file_get_contents(resource_path('views/admin/pages/accounts_tree.blade.php'));
         $template = preg_replace('/^@extends\([\'"]admin\.layouts\.app[\'"]\)\s*/', '', $template);
         $compiled = app('blade.compiler')->compileString($template);
 
@@ -88,7 +97,6 @@ class DashboardLocaleTest extends TestCase
 @extends('superadmin.layout')
 <span>{{ $tenant->status ? 'نشطة' : 'موقوفة' }}</span>
 BLADE;
-        $template = \App\Support\DashboardTemplateTranslator::compile($template);
         $template = preg_replace('/^@extends\([\'"]superadmin\.layout[\'"]\)\s*/', '', $template);
         $compiled = app('blade.compiler')->compileString($template);
 
@@ -129,9 +137,8 @@ BLADE;
 <section><h2>حفظ الشركة</h2><input placeholder="اسم الشركة"><form onsubmit="return confirm('هل تريد المتابعة؟')"></form><ul>@foreach(['عادي', 'تسوية'] as $type)<li>{{ $type }}</li>@endforeach</ul><script>const empty = 'لا توجد نتائج'; const summary = `لا توجد بيانات: ${count}`; const nested = `<div>${items.map(item => `<span>لا توجد نتائج: ${item.name}</span>`).join('')}</div>`;</script></section>
 BLADE;
 
-        $translatedTemplate = \App\Support\DashboardTemplateTranslator::compile($template);
-        $translatedTemplate = preg_replace('/^@extends\(\'admin\.layouts\.app\'\)/', '', $translatedTemplate);
-        $compiled = app('blade.compiler')->compileString($translatedTemplate);
+        $template = preg_replace('/^@extends\(\'admin\.layouts\.app\'\)/', '', $template);
+        $compiled = app('blade.compiler')->compileString($template);
 
         $this->assertStringContainsString('DashboardTemplateTranslator::translate', $compiled);
         $this->assertStringContainsString('حفظ الشركة', $compiled);

@@ -9,6 +9,7 @@
 <div class="panel">
   <div class="panel-head">
     <h3>السيارات والتوبيسات المسجلة — {{ $vehicles->count() }}</h3>
+    <a class="btn btn-dark" href="{{ route('accounting.suppliers') }}">إدارة الموردين</a>
     <a class="btn btn-dark" href="{{ route('accounting.drivers') }}">إدارة سائقي السيارات والأتوبيسات</a>
     @if(request()->boolean('include_archived'))
       <a class="btn btn-dark" href="{{ route('accounting.vehicles') }}">إخفاء المؤرشف</a>
@@ -18,12 +19,13 @@
     <button class="btn btn-gold" type="button" onclick="openVehicleModal('create-vehicle-modal')">＋ إضافة سيارة / توبيس</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>السيارة / التوبيس</th><th>المنطقة</th><th>الكود</th><th>النوع</th><th>التشغيل</th><th>حساب الإيراد</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+    <thead><tr><th>السيارة / التوبيس</th><th>المنطقة</th><th>الكود</th><th>النوع</th><th>التشغيل</th><th>المورد</th><th>حساب الإيراد</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
     <tbody>
       @forelse($vehicles as $vehicle)
         <tr>
           <td>{{ $vehicle->name }}</td><td>{{ $vehicle->region?->name ?? 'غير محددة' }}</td><td class="num">{{ $vehicle->code }}</td><td>{{ $vehicle->vehicleType?->name ?? '—' }}</td>
           <td>{{ $vehicle->ownership_type === 'external' ? 'خارجي' : 'داخلي' }}</td>
+          <td>{{ $vehicle->supplier?->name ?? '—' }}</td>
           <td>{{ $vehicle->revenueAccount?->acc_no }} — {{ $vehicle->revenueAccount?->name ?? 'بانتظار إنشاء الحساب' }}</td>
           <td>{{ $vehicle->status === 'active' ? 'نشطة' : 'غير نشطة' }}</td>
           <td>
@@ -33,7 +35,8 @@
                 data-name="{{ $vehicle->name }}" data-code="{{ $vehicle->code }}"
                 data-type-id="{{ $vehicle->vehicle_type_id }}" data-ownership="{{ $vehicle->ownership_type }}"
                 data-status="{{ $vehicle->status }}" data-color="{{ $vehicle->color }}" data-region="{{ $vehicle->region_id }}"
-                data-codes="{{ $vehicle->codes }}" data-codee="{{ $vehicle->codee }}">تعديل</button>
+                data-codes="{{ $vehicle->codes }}" data-codee="{{ $vehicle->codee }}"
+                data-supplier="{{ $vehicle->supplier_id }}" data-supplier-price="{{ $vehicle->supplier_price }}">تعديل</button>
               <form method="POST" action="{{ route('accounting.vehicles.destroy', $vehicle) }}" onsubmit="return confirm('سيتم أرشفة السيارة وإخفاؤها من الموارد النشطة مع الاحتفاظ بسجلاتها المحاسبية والتشغيلية. هل تريد المتابعة؟')">
                 @csrf @method('DELETE')
                 <button class="btn btn-red btn-sm" type="submit">حذف</button>
@@ -41,7 +44,7 @@
             </div>
           </td>
         </tr>
-      @empty<tr><td colspan="8" class="empty-state">لا توجد سيارات أو توبيسات مسجلة.</td></tr>@endforelse
+      @empty<tr><td colspan="9" class="empty-state">لا توجد سيارات أو توبيسات مسجلة.</td></tr>@endforelse
     </tbody>
   </table></div>
 </div>
@@ -70,6 +73,13 @@
               <option value="external" @selected(old('_form_type') === 'create' && old('ownership_type') === 'external')>خارجي</option>
             </select>
           </div>
+          <div class="field vehicle-create-supplier-field"><label for="vehicle-supplier">المورد *</label>
+            <select id="vehicle-supplier" name="supplier_id">
+              <option value="">اختر المورد</option>
+              @foreach($suppliers as $supplier)<option value="{{ $supplier->id }}" @selected(old('_form_type') === 'create' && old('supplier_id') == $supplier->id)>{{ $supplier->name }}</option>@endforeach
+            </select>
+          </div>
+          <div class="field vehicle-create-supplier-field"><label for="vehicle-supplier-price">تكلفة المورد *</label><input id="vehicle-supplier-price" type="number" name="supplier_price" value="{{ old('_form_type') === 'create' ? old('supplier_price') : '' }}" min="0" step="0.01"></div>
           <div class="field"><label for="vehicle-status">الحالة *</label>
             <select id="vehicle-status" name="status" required>
               <option value="active" @selected(old('_form_type') !== 'create' || old('status', 'active') === 'active')>نشطة</option>
@@ -107,6 +117,12 @@
           </div>
           <div class="field"><label for="edit-vehicle-region">المنطقة *</label><select id="edit-vehicle-region" name="region_id" required><option value="">اختر المنطقة</option>@foreach($regions as $region)<option value="{{ $region->id }}">{{ $region->name }}</option>@endforeach</select></div>
           <div class="field"><label for="edit-vehicle-ownership">التشغيل *</label><select id="edit-vehicle-ownership" name="ownership_type" required><option value="internal">داخلي</option><option value="external">خارجي</option></select></div>
+          <div class="field vehicle-edit-supplier-field"><label for="edit-vehicle-supplier">المورد *</label>
+            <select id="edit-vehicle-supplier" name="supplier_id"><option value="">اختر المورد</option>
+              @foreach($suppliers as $supplier)<option value="{{ $supplier->id }}">{{ $supplier->name }}</option>@endforeach
+            </select>
+          </div>
+          <div class="field vehicle-edit-supplier-field"><label for="edit-vehicle-supplier-price">تكلفة المورد *</label><input id="edit-vehicle-supplier-price" type="number" name="supplier_price" min="0" step="0.01"></div>
           <div class="field"><label for="edit-vehicle-status">الحالة *</label><select id="edit-vehicle-status" name="status" required><option value="active">نشطة</option><option value="inactive">غير نشطة / مؤرشفة</option></select></div>
           <div class="field"><label for="edit-vehicle-color">اللون</label><input id="edit-vehicle-color" name="color" maxlength="50"></div>
           <div class="field"><label for="edit-vehicle-codes">الكود الإضافي</label><input id="edit-vehicle-codes" name="codes" maxlength="50"></div>
@@ -128,6 +144,16 @@
 function openVehicleModal(id) { document.getElementById(id).classList.add('open'); }
 function closeVehicleModal(id) { document.getElementById(id).classList.remove('open'); }
 
+function updateVehicleSupplierFields(prefix) {
+  const idPrefix = prefix === 'create-' ? 'vehicle-' : 'edit-vehicle-';
+  const external = document.getElementById(idPrefix + 'ownership').value === 'external';
+  document.querySelectorAll('.vehicle-' + prefix + 'supplier-field').forEach(field => field.hidden = !external);
+  document.getElementById(idPrefix + 'supplier').required = external;
+  document.getElementById(idPrefix + 'supplier-price').required = external;
+}
+
+document.getElementById('vehicle-ownership').addEventListener('change', () => updateVehicleSupplierFields('create-'));
+document.getElementById('edit-vehicle-ownership').addEventListener('change', () => updateVehicleSupplierFields('edit-'));
 document.querySelectorAll('[data-edit-vehicle]').forEach(button => button.addEventListener('click', () => {
   const data = button.dataset;
   const form = document.getElementById('edit-vehicle-form');
@@ -142,9 +168,13 @@ document.querySelectorAll('[data-edit-vehicle]').forEach(button => button.addEve
   document.getElementById('edit-vehicle-color').value = data.color || '';
   document.getElementById('edit-vehicle-codes').value = data.codes || '';
   document.getElementById('edit-vehicle-codee').value = data.codee || '';
+  document.getElementById('edit-vehicle-supplier').value = data.supplier || '';
+  document.getElementById('edit-vehicle-supplier-price').value = data.supplierPrice || '';
+  updateVehicleSupplierFields('edit-');
   openVehicleModal('edit-vehicle-modal');
 }));
 
+updateVehicleSupplierFields('create-');
 @if($errors->any() && old('_form_type') === 'create')
 openVehicleModal('create-vehicle-modal');
 @elseif($errors->any() && old('_form_type') === 'edit')
@@ -152,9 +182,10 @@ openVehicleModal('create-vehicle-modal');
   const editButton = document.querySelector('[data-edit-vehicle][data-id="{{ old('_resource_id') }}"]');
   if (editButton) {
     editButton.click();
-    @foreach(['name', 'code', 'vehicle_type_id', 'region_id', 'ownership_type', 'status', 'color', 'codes', 'codee'] as $field)
+    @foreach(['name', 'code', 'vehicle_type_id', 'region_id', 'ownership_type', 'supplier_id', 'supplier_price', 'status', 'color', 'codes', 'codee'] as $field)
     if (document.querySelector('#edit-vehicle-form [name="{{ $field }}"]')) document.querySelector('#edit-vehicle-form [name="{{ $field }}"]').value = @json(old($field));
     @endforeach
+    updateVehicleSupplierFields('edit-');
   }
 }
 @endif

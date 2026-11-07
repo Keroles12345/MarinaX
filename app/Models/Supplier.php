@@ -20,4 +20,9 @@ class Supplier extends Model
     {
         return $this->hasMany(Boat::class, 'supplier_id');
     }
+
+    public function vehicles(): HasMany
+    {
+        return $this->hasMany(Vehicle::class, 'supplier_id');
+    }
 }

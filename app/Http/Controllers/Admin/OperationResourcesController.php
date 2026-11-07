@@ -378,7 +378,7 @@ class OperationResourcesController extends Controller
 
     public function vehicles()
     {
-        $vehicles = Vehicle::query()->with(['vehicleType', 'revenueAccount', 'region'])->orderBy('name');
+        $vehicles = Vehicle::query()->with(['vehicleType', 'revenueAccount', 'region', 'supplier'])->orderBy('name');
         if (! request()->boolean('include_archived')) {
             $vehicles->where('status', 'active');
         }
@@ -386,6 +386,7 @@ class OperationResourcesController extends Controller
         return view('admin.pages.vehicles', $this->pageData([
             'vehicles' => $vehicles->get(),
             'vehicleTypes' => VehicleType::query()->orderBy('name')->get(['id', 'name']),
+            'suppliers' => Supplier::query()->where('status', true)->orderBy('name')->get(['id', 'name']),
             'regions' => \App\Support\TenantDatabase::table('regions')->where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]));
     }
@@ -642,6 +643,11 @@ class OperationResourcesController extends Controller
     {
         $data = $this->validateVehicle($request);
 
+        if ($data['ownership_type'] === 'internal') {
+            $data['supplier_id'] = null;
+            $data['supplier_price'] = null;
+        }
+
         DB::transaction(function () use ($data, $revenueAccounts): void {
             $vehicle = Vehicle::query()->create($data + ['created_at' => now()]);
             $revenueAccounts->ensure('vehicle', (int) $vehicle->id, $vehicle->name, $vehicle->ownership_type);
@@ -654,6 +660,11 @@ class OperationResourcesController extends Controller
     public function updateVehicle(Request $request, Vehicle $vehicle, OperationRevenueAccountService $revenueAccounts)
     {
         $data = $this->validateVehicle($request, $vehicle);
+
+        if ($data['ownership_type'] === 'internal') {
+            $data['supplier_id'] = null;
+            $data['supplier_price'] = null;
+        }
 
         DB::transaction(function () use ($data, $vehicle, $revenueAccounts): void {
             $vehicle->update($data);
@@ -698,6 +709,8 @@ class OperationResourcesController extends Controller
             'vehicle_type_id' => ['required', 'integer', Rule::exists('vehicle_types', 'id')],
             'region_id' => ['required', 'integer', Rule::exists('regions', 'id')->where('is_active', true)->where('tenant_id', \App\Support\TenantContext::id())],
             'ownership_type' => ['required', Rule::in(['internal', 'external'])],
+            'supplier_id' => ['nullable', 'required_if:ownership_type,external', 'integer', Rule::exists('suppliers', 'id')->where('status', true)->where('tenant_id', \App\Support\TenantContext::id())],
+            'supplier_price' => ['nullable', 'required_if:ownership_type,external', 'numeric', 'min:0'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
             'codes' => ['nullable', 'string', 'max:50'],
             'color' => ['nullable', 'string', 'max:50'],

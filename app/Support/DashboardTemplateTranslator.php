@@ -4,17 +4,11 @@ namespace App\Support;
 
 class DashboardTemplateTranslator
 {
-    private const DASHBOARD_LAYOUTS = [
-        'admin.layouts.app',
-        'staff.main',
-        'superadmin.layout',
-    ];
-
     private static ?array $englishTranslations = null;
 
     public static function compile(string $source): string
     {
-        if (! self::isDashboardTemplate($source)) {
+        if (! self::containsArabicText($source)) {
             return $source;
         }
 
@@ -116,15 +110,9 @@ class DashboardTemplateTranslator
         return self::$englishTranslations;
     }
 
-    private static function isDashboardTemplate(string $source): bool
+    private static function containsArabicText(string $source): bool
     {
-        foreach (self::DASHBOARD_LAYOUTS as $layout) {
-            if (preg_match('/@extends\(\s*[\'"]'.preg_quote($layout, '/').'[\'"]\s*\)/', $source)) {
-                return true;
-            }
-        }
-
-        return false;
+        return preg_match('/\p{Arabic}/u', $source) === 1;
     }
 
     private static function translateSections(string $source): string

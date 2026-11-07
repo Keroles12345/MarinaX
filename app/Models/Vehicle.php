@@ -21,6 +21,8 @@ class Vehicle extends Model
         'code',
         'status',
         'ownership_type',
+        'supplier_id',
+        'supplier_price',
         'revenue_account_id',
         'created_at',
         'codes',
@@ -32,6 +34,7 @@ class Vehicle extends Model
 
     protected $casts = [
         'created_at' => 'datetime',
+        'supplier_price' => 'decimal:2',
     ];
 
     public function vehicleType(): BelongsTo
@@ -52,5 +55,10 @@ class Vehicle extends Model
     public function revenueAccount(): BelongsTo
     {
         return $this->belongsTo(accounts::class, 'revenue_account_id');
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 }

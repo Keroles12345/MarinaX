@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -309,6 +309,7 @@
 </style>
 </head>
 <body>
+    <div style="position:absolute;top:20px;right:20px;z-index:1">@include('shared.language-switcher')</div>
 
 <div class="login-wrapper">
 
