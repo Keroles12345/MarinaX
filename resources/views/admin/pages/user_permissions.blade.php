@@ -37,7 +37,7 @@
 </style>
 
 <div class="permissions-page">
-  <p class="permissions-intro">اختار المستخدم وحدد الصلاحيات التي يحتاجها للوصول إلى وظائف النظام.</p>
+  <p class="permissions-intro">يمكنك منح الموظف الصلاحيات التي اعتمدها لك السوبر أدمن فقط. أي صلاحية يسحبها السوبر أدمن تتوقف عن العمل للموظفين.</p>
 
   @if(session('success'))<div class="permissions-alert success">{{ session('success') }}</div>@endif
   @if($errors->any())
@@ -46,16 +46,16 @@
 
   <section class="permissions-panel">
     <div class="permissions-panel-head">
-      <h3>اختيار المستخدم</h3>
-      <p>ابحث عن حساب لعرض صلاحياته وتعديلها.</p>
+      <h3>اختيار الموظف</h3>
+      <p>تظهر هنا حسابات الموظفين التابعة لشركتك فقط.</p>
     </div>
     <form class="permissions-user-form" method="GET" action="{{ route('admin.user-permissions') }}">
-      <label class="permissions-label" for="user">المستخدم</label>
+      <label class="permissions-label" for="user">الموظف</label>
       <select class="permissions-select" name="user" id="user" onchange="this.form.submit()">
-        <option value="">اختار مستخدم</option>
+        <option value="">اختار موظفًا</option>
         @foreach($users as $item)
           <option value="{{ $item->id }}" @selected($selectedUser && $selectedUser->id === $item->id)>
-            {{ $item->name }} — {{ $item->email }} ({{ $item->role }})
+            {{ $item->name }} — {{ $item->email }}
           </option>
         @endforeach
       </select>
@@ -69,22 +69,26 @@
       <div class="permissions-panel-head">
         <div class="permissions-user">
           <div class="permissions-avatar">{{ mb_substr($selectedUser->name, 0, 1) }}</div>
-          <div><h3>{{ $selectedUser->name }}</h3><p>{{ $selectedUser->email }} · {{ $selectedUser->role }}</p></div>
+          <div><h3>{{ $selectedUser->name }}</h3><p>{{ $selectedUser->email }} · موظف</p></div>
         </div>
       </div>
       <div class="permissions-tools">
         <input class="permissions-search" type="search" id="permSearch" placeholder="ابحث عن صلاحية...">
         <label class="permissions-select-all"><input type="checkbox" id="selectAll"> تحديد كل النتائج الظاهرة</label>
       </div>
+      @if(!count($delegableNames))
+        <p class="permissions-intro" style="padding:0 20px 16px">لم يمنحك السوبر أدمن صلاحيات تشغيل لتوزيعها على الموظفين.</p>
+      @endif
       <div class="permissions-grid">
-        @forelse($permissions as $permission)
-          <label class="perm-item" data-perm="{{ strtolower($permission->name) }}">
-            <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" class="perm-checkbox" @checked(in_array($permission->id, $assignedPermissionIds, true))>
-            <span class="perm-name">{{ $permission->name }}</span>
-          </label>
-        @empty
-          <p class="permissions-intro">لا توجد صلاحيات مسجلة للـ guard الافتراضي (web).</p>
-        @endforelse
+        @foreach($modules as $module => $definition)
+          @foreach($definition['actions'] as $action)
+            @php($permissionName = \App\Support\SystemPermissions::name($module, $action))
+            <label class="perm-item" data-perm="{{ strtolower(__($definition['label']).' '.__($actions[$action])) }}">
+              <input type="checkbox" name="permissions[]" value="{{ $permissionName }}" class="perm-checkbox" @checked(in_array($permissionName, $assignedPermissionNames, true))>
+              <span class="perm-name">{{ __($definition['label']) }} — {{ __($actions[$action]) }}</span>
+            </label>
+          @endforeach
+        @endforeach
       </div>
       <div class="permissions-footer">
         <a class="permissions-cancel" href="{{ route('admin.user-permissions') }}">إلغاء</a>
@@ -93,8 +97,8 @@
     </form>
   @else
     <section class="permissions-panel permissions-empty">
-      <strong>لم يتم اختيار مستخدم</strong>
-      اختار مستخدمًا من القائمة لعرض صلاحياته.
+      <strong>لم يتم اختيار موظف</strong>
+      اختار موظفًا من القائمة لعرض صلاحياته.
     </section>
   @endif
 </div>

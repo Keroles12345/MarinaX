@@ -505,7 +505,7 @@
     </div>
 
     @error('password')
-        <div class="error-message">x`
+        <div class="error-message">
             {{ $message }}
         </div>
     @enderror

@@ -17,6 +17,7 @@ class AccountsTreeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpSystemPermissionTables();
 
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
@@ -100,6 +101,7 @@ class AccountsTreeTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
         DB::table('accounts')->insert([
             ['tenant_id' => $tenantId, 'acc_no' => '6101', 'name' => 'Other type account', 'type' => 'أخرى', 'opening_balance' => 0, 'budget' => 0, 'is_system' => false],
             ['tenant_id' => $tenantId, 'acc_no' => '6201', 'name' => 'Untyped account', 'type' => '', 'opening_balance' => 0, 'budget' => 0, 'is_system' => false],
@@ -152,6 +154,7 @@ class AccountsTreeTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
         $accountId = DB::table('accounts')->insertGetId([
             'tenant_id' => $tenantId,
             'acc_no' => '1101',

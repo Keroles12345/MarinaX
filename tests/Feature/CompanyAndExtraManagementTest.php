@@ -14,6 +14,7 @@ class CompanyAndExtraManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpSystemPermissionTables();
 
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
@@ -129,6 +130,7 @@ class CompanyAndExtraManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->get(route('accounting.companies'))
@@ -220,6 +222,7 @@ class CompanyAndExtraManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->get(route('accounting.company-prices'))

@@ -7,13 +7,17 @@
   <div class="panel-head">
     <h3>📒 القيود</h3>
     <div class="toolbar">
-      @if($user->role !== 'viewer')
+      @systemPermission('journal', 'create')
       <button class="btn btn-gold btn-sm" onclick="newEntry()">➕ قيد جديد</button>
-      @endif
+      @endsystemPermission
+      @systemPermission('journal', 'update')
       <button class="btn btn-dark btn-sm" onclick="openModal('impModal')">📥 استيراد</button>
+      @endsystemPermission
       <a class="btn btn-dark btn-sm" href="/templates/journal.xlsx">📄 القالب</a>
       @if($user->role === 'admin')
+      @systemPermission('journal', 'delete')
       <button class="btn btn-red btn-sm" onclick="openModal('wipeModal')">🧹 مسح قيود</button>
+      @endsystemPermission
       @endif
     </div>
   </div>
@@ -54,6 +58,7 @@
 </div>
 
 <!-- مودال محرر القيد -->
+@if(\App\Support\SystemPermissions::allows($user, 'journal', 'create') || \App\Support\SystemPermissions::allows($user, 'journal', 'update'))
 <div class="modal-overlay" id="entryModal">
   <div class="modal wide">
     <div class="modal-head"><h3 id="entry-modal-title">قيد يومية جديد</h3>
@@ -91,14 +96,16 @@
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-dark" onclick="saveEntry('draft')">💾 حفظ كمسودة</button>
-      <button class="btn btn-green" onclick="saveEntry('posted')">✅ حفظ وترحيل</button>
+      <button class="btn btn-dark" id="save-entry-draft" onclick="saveEntry('draft')">💾 حفظ كمسودة</button>
+      <button class="btn btn-green" id="save-entry-post" onclick="saveEntry('posted')">✅ حفظ وترحيل</button>
       <button class="btn btn-dark" data-close-modal>إلغاء</button>
     </div>
   </div>
 </div>
+@endif
 
 <!-- مودال الاستيراد -->
+@systemPermission('journal', 'update')
 <div class="modal-overlay" id="impModal">
   <div class="modal">
     <div class="modal-head"><h3>استيراد قيود من دفتر اليومية.xlsx</h3>
@@ -125,9 +132,11 @@
     </div>
   </div>
 </div>
+@endsystemPermission
 
 <!-- مودال مسح القيود (أدمن فقط) -->
 @if($user->role === 'admin')
+@systemPermission('journal', 'delete')
 <div class="modal-overlay" id="wipeModal">
   <div class="modal">
     <div class="modal-head"><h3>🧹 مسح القيود</h3>
@@ -155,6 +164,7 @@
     </div>
   </div>
 </div>
+@endsystemPermission
 @endif
 
 @endsection
@@ -162,7 +172,9 @@
 @section('scripts')
 <script>
 let ACCOUNTS = [], editingId = null;
-const canWrite = @json($user->role !== 'viewer');
+const CAN_CREATE_JOURNAL = @json(\App\Support\SystemPermissions::allows($user, 'journal', 'create'));
+const CAN_UPDATE_JOURNAL = @json(\App\Support\SystemPermissions::allows($user, 'journal', 'update'));
+const CAN_DELETE_JOURNAL = @json(\App\Support\SystemPermissions::allows($user, 'journal', 'delete'));
 
 function accOptions(selected) {
   return `<option value="">— اختر الحساب —</option>` + ACCOUNTS.map(a =>
@@ -210,17 +222,13 @@ async function loadEntries() {
         <td class="num" style="color:var(--green)">${fmt(e.total_debit)}</td>
         <td class="num" style="color:var(--red)">${fmt(e.total_credit)}</td>
         <td class="num">${e.status==='posted'?'<span class="badge posted">مرحل</span>':'<span class="badge draft">مسودة</span>'}</td>
-        <td class="num">
-          ${canWrite ? `<div class="j-actions">
-            ${e.status==='draft' ? `
-              <button class="btn btn-sm btn-dark act-btn" title="تعديل" onclick='editEntry(${JSON.stringify(e.id)})'>✏️</button>
-              <button class="btn btn-sm btn-green act-btn" title="ترحيل" onclick="postEntry(${e.id})">✔</button>` :
-              `<button class="btn btn-sm btn-dark act-btn" title="إلغاء الترحيل" onclick="unpostEntry(${e.id})">↩️</button>`}
-            <button class="btn btn-sm btn-gold act-btn" title="كرر القيد في قيد جديد" onclick='repeatEntry(${JSON.stringify(e.id)})'>📋</button>
-            <button class="btn btn-sm btn-red act-btn" title="حذف" onclick="delEntry(${e.id}, '${esc(e.status)}')">🗑️</button>
-          </div>`
-          : '<span class="badge gray">عرض فقط</span>'}
-        </td>
+        <td class="num"><div class="j-actions">
+          ${CAN_UPDATE_JOURNAL && e.status==='draft' ? `<button class="btn btn-sm btn-dark act-btn" title="تعديل" onclick='editEntry(${JSON.stringify(e.id)})'>✏️</button>` : ''}
+          ${CAN_UPDATE_JOURNAL && e.status==='draft' ? `<button class="btn btn-sm btn-green act-btn" title="ترحيل" onclick="postEntry(${e.id})">✔</button>` : ''}
+          ${CAN_UPDATE_JOURNAL && e.status==='posted' ? `<button class="btn btn-sm btn-dark act-btn" title="إلغاء الترحيل" onclick="unpostEntry(${e.id})">↩️</button>` : ''}
+          ${CAN_CREATE_JOURNAL ? `<button class="btn btn-sm btn-gold act-btn" title="كرر القيد في قيد جديد" onclick='repeatEntry(${JSON.stringify(e.id)})'>📋</button>` : ''}
+          ${CAN_DELETE_JOURNAL ? `<button class="btn btn-sm btn-red act-btn" title="حذف" onclick="delEntry(${e.id}, '${esc(e.status)}')">🗑️</button>` : ''}
+        </div></td>
       </tr>`).join('');
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -231,6 +239,7 @@ function exportLink() {
 
 /* ===== محرر القيد ===== */
 function newEntry() {
+  if (!CAN_CREATE_JOURNAL) return;
   editingId = null;
   $('#entry-modal-title').textContent = 'قيد يومية جديد';
   $('#e-desc').value = '';
@@ -238,6 +247,8 @@ function newEntry() {
   $('#e-type').value = 'عادي';
   $('#e-date').value = '{{ $today }}';
   $('#lines-body').innerHTML = '';
+  $('#save-entry-draft').classList.toggle('hidden', !CAN_CREATE_JOURNAL);
+  $('#save-entry-post').classList.toggle('hidden', !CAN_CREATE_JOURNAL);
   addLine(); addLine();
   openModal('entryModal');
 }
@@ -329,6 +340,7 @@ async function saveEntry(status) {
 }
 
 async function editEntry(id) {
+  if (!CAN_UPDATE_JOURNAL) return;
   try {
     const all = await api('/api/journal?limit=2000');
     const e = all.entries.find(x => x.id === id);
@@ -336,6 +348,8 @@ async function editEntry(id) {
     if (e.status === 'posted') return toast('القيد مرحل — ألغِ الترحيل أولًا', 'err');
     openEntryEditor(e, `تعديل القيد رقم الحركة ${e.movement_no}`);
     editingId = id;
+    $('#save-entry-draft').classList.toggle('hidden', !CAN_UPDATE_JOURNAL);
+    $('#save-entry-post').classList.toggle('hidden', !CAN_UPDATE_JOURNAL);
   } catch (e2) { toast(e2.message, 'err'); }
 }
 

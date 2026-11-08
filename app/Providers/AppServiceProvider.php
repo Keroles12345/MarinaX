@@ -9,6 +9,7 @@ use App\Support\TenantDatabase;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Validator;
+use App\Support\SystemPermissions;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +29,10 @@ return new CurrencyService();
     public function boot(): void
     {
         Blade::precompiler([DashboardTemplateTranslator::class, 'compile']);
+
+        Blade::if('systemPermission', function (string $module, string $action = 'view'): bool {
+            return SystemPermissions::allows(auth()->user(), $module, $action);
+        });
 
         Validator::extend('tenant_exists', function (string $attribute, mixed $value, array $parameters): bool {
             if (! TenantContext::isInitialized() || TenantContext::id() === null || empty($parameters[0])) {

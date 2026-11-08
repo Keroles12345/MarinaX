@@ -14,7 +14,9 @@
         <input id="s-from" type="date" value="{{ $periodFrom }}"></div>
       <div class="field"><label>نهاية فترة التقارير</label>
         <input id="s-to" type="date" value="{{ $periodTo }}"></div>
+      @systemPermission('settings', 'update')
       <button class="btn btn-gold" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+      @endsystemPermission
     </div>
   </div>
   @endif
@@ -22,7 +24,9 @@
   @if($user->role === 'admin')
   <div class="panel">
     <div class="panel-head"><h3>✍️ التواقيع في التقارير المصدَّرة</h3>
+      @systemPermission('settings', 'update')
       <button class="btn btn-teal btn-sm" onclick="addSigRow()">➕ إضافة توقيع</button>
+      @endsystemPermission
     </div>
     <div class="panel-body">
       <div class="alert ok" style="font-size:12.5px">
@@ -30,7 +34,9 @@
         باقي التواقيع (المسمى + الاسم) تقدر تعدّلها وتضيفها وتحذفها من هنا — بتظهر في كل التقارير.
       </div>
       <div class="sig-list" id="sig-list"></div>
+      @systemPermission('settings', 'update')
       <button class="btn btn-gold" style="margin-top:6px" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+      @endsystemPermission
     </div>
   </div>
   @endif
@@ -38,9 +44,13 @@
   @if($user->role === 'admin')
   <div class="panel">
     <div class="panel-head"><h3>🗄️ النسخ الاحتياطية</h3>
+      @systemPermission('settings', 'create')
       <button class="btn btn-gold btn-sm" onclick="doBackup()">⬇️ نسخة احتياطية الآن</button>
+      @endsystemPermission
+      @systemPermission('settings', 'update')
       <button class="btn btn-teal btn-sm" onclick="document.getElementById('restore-file').click()">⬆️ استعادة من ملف</button>
       <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreFromFile(this)">
+      @endsystemPermission
     </div>
     <div class="panel-body">
       <div class="alert ok" style="font-size:12.5px">
@@ -87,6 +97,7 @@
 @section('scripts')
 <script>
 @if($user->role === 'admin')
+const CAN_RESTORE_BACKUP = @json(\App\Support\SystemPermissions::allows($user, 'settings', 'update'));
 function fmtSize(b) {
   return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
 }
@@ -105,7 +116,7 @@ async function loadBackups() {
         <td class="num">${esc(b.modified)}</td>
         <td class="num">${fmtSize(b.size)}</td>
         <td class="num"><a class="btn btn-sm btn-teal" href="/api/backups/${encodeURIComponent(b.name)}">⬇️ تنزيل</a>
-        <button class="btn btn-sm btn-gold" onclick="restoreBackup('${encodeURIComponent(b.name)}')">🔄 استعادة</button></td>
+        ${CAN_RESTORE_BACKUP ? `<button class="btn btn-sm btn-gold" onclick="restoreBackup('${encodeURIComponent(b.name)}')">🔄 استعادة</button>` : ''}</td>
       </tr>`).join('');
   } catch (e) { toast(e.message, 'err'); }
 }

@@ -14,6 +14,7 @@ class TripsAndHotelsManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpSystemPermissionTables();
 
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
@@ -110,6 +111,7 @@ class TripsAndHotelsManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->get(route('accounting.trips'))
@@ -185,6 +187,7 @@ class TripsAndHotelsManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->from(route('accounting.trips'))
@@ -234,6 +237,7 @@ class TripsAndHotelsManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->put("/api/trips/{$tripId}/hotels", [

@@ -16,7 +16,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.boats', ['include_archived' => 1]) }}">عرض المؤرشف</a>
     @endif
+    @systemPermission('boats', 'create')
     <button class="btn btn-gold" type="button" onclick="openBoatModal('create-boat-modal')">＋ إضافة مركب</button>
+    @endsystemPermission
   </div>
   <div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>المركب</th><th>المنطقة</th><th>الكود</th><th>الملكية</th><th>المورد</th><th>حساب الإيراد</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
@@ -29,6 +31,7 @@
           <td>{{ $boat->is_active ? 'نشط' : 'غير نشط' }}</td>
           <td>
             <div class="j-actions">
+              @systemPermission('boats', 'update')
               <button class="btn btn-dark btn-sm" type="button" data-edit-boat
                 data-id="{{ $boat->id }}" data-url="{{ route('accounting.boats.update', $boat) }}"
                 data-name="{{ $boat->name }}" data-code="{{ $boat->code }}"
@@ -37,10 +40,13 @@
                 data-supplier="{{ $boat->supplier_id }}" data-supplier-price="{{ $boat->supplier_price }}"
                 data-region="{{ $boat->region_id }}"
                 data-active="{{ $boat->is_active ? '1' : '0' }}">تعديل</button>
+              @endsystemPermission
+              @systemPermission('boats', 'delete')
               <form method="POST" action="{{ route('accounting.boats.destroy', $boat) }}" onsubmit="return confirm('سيتم أرشفة المركب وإخفاؤه من الموارد النشطة مع الاحتفاظ بسجلاته المحاسبية والتشغيلية. هل تريد المتابعة؟')">
                 @csrf @method('DELETE')
                 <button class="btn btn-red btn-sm" type="submit">حذف</button>
               </form>
+              @endsystemPermission
             </div>
           </td>
         </tr>

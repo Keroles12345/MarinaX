@@ -13,7 +13,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.suppliers', ['include_archived' => 1]) }}">عرض المؤرشف</a>
     @endif
+    @systemPermission('suppliers', 'create')
     <button class="btn btn-gold" type="button" onclick="openSupplierModal('create-supplier-modal')">＋ إضافة مورد</button>
+    @endsystemPermission
   </div>
   <div class="tbl-wrap">
     <table class="tbl">
@@ -31,6 +33,7 @@
             <td>{{ $supplier->status ? 'نشط' : 'مؤرشف' }}</td>
             <td>
               <div class="j-actions">
+                @systemPermission('suppliers', 'update')
                 <button class="btn btn-dark btn-sm" type="button" data-edit-supplier
                   data-id="{{ $supplier->id }}"
                   data-url="{{ route('accounting.suppliers.update', $supplier) }}"
@@ -39,12 +42,15 @@
                   data-email="{{ $supplier->email }}"
                   data-address="{{ $supplier->address }}"
                   data-status="{{ $supplier->status ? '1' : '0' }}">تعديل</button>
+                @endsystemPermission
                 @if($supplier->status)
+                  @systemPermission('suppliers', 'delete')
                   <form method="POST" action="{{ route('accounting.suppliers.destroy', $supplier) }}"
                     onsubmit="return confirm('سيتم أرشفة المورد. ستظل السجلات والارتباطات السابقة محفوظة. هل تريد المتابعة؟')">
                     @csrf @method('DELETE')
                     <button class="btn btn-red btn-sm" type="submit">أرشفة</button>
                   </form>
+                  @endsystemPermission
                 @endif
               </div>
             </td>
@@ -57,6 +63,7 @@
   </div>
 </div>
 
+@systemPermission('suppliers', 'create')
 <div class="modal-overlay" id="create-supplier-modal" role="dialog" aria-modal="true" aria-labelledby="create-supplier-title">
   <div class="modal">
     <div class="modal-head">
@@ -84,7 +91,9 @@
     </form>
   </div>
 </div>
+@endsystemPermission
 
+@systemPermission('suppliers', 'update')
 <div class="modal-overlay" id="edit-supplier-modal" role="dialog" aria-modal="true" aria-labelledby="edit-supplier-title">
   <div class="modal">
     <div class="modal-head">
@@ -121,7 +130,7 @@
     </form>
   </div>
 </div>
-
+@endsystemPermission
 @endsection
 
 @section('scripts')

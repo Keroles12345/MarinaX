@@ -2,7 +2,9 @@
 
 use App\Services\CurrencyService;
 
-function currency(): CurrencyService
-{
-    return app(CurrencyService::class);
+if (! function_exists('currency')) {
+    function currency(): CurrencyService
+    {
+        return app(CurrencyService::class);
+    }
 }

@@ -55,4 +55,5 @@ class AdminMiddlewareTest extends TestCase
         self::assertSame(10, Auth::guard('staff')->id());
         self::assertSame(20, Auth::guard('admin')->id());
     }
+
 }

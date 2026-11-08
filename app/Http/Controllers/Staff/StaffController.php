@@ -30,7 +30,7 @@ public function loginn(Request $request)
     ]);
 
     $guard = Auth::guard('staff');
-    if (!$guard->attempt($credentials, $request->boolean('remember'))) {
+    if (! $guard->attempt($credentials, $request->boolean('remember'))) {
         return back()
             ->withInput($request->except('password'))
             ->withErrors([

@@ -13,7 +13,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.extras', ['include_archived' => 1]) }}">عرض الموقوف</a>
     @endif
+    @systemPermission('extras', 'create')
     <button class="btn btn-gold" type="button" onclick="openExtraModal('create-extra-modal')">＋ إضافة خدمة</button>
+    @endsystemPermission
   </div>
   <div class="tbl-wrap">
     <table class="tbl">
@@ -24,14 +26,18 @@
             <td>{{ $extra->name }}</td><td class="num">{{ number_format((float) $extra->price, 2) }}</td>
             <td class="num">{{ number_format((float) $extra->rate_tax, 2) }}%</td><td>{{ $extra->status ? 'نشطة' : 'موقوفة' }}</td>
             <td><div class="j-actions">
+              @systemPermission('extras', 'update')
               <button class="btn btn-dark btn-sm" type="button" data-edit-extra
                 data-id="{{ $extra->id }}" data-url="{{ route('accounting.extras.update', $extra) }}"
                 data-name="{{ $extra->name }}" data-price="{{ $extra->price }}"
                 data-tax="{{ $extra->rate_tax }}" data-status="{{ $extra->status ? '1' : '0' }}">تعديل</button>
+              @endsystemPermission
               @if($extra->status)
+                @systemPermission('extras', 'delete')
                 <form method="POST" action="{{ route('accounting.extras.destroy', $extra) }}" onsubmit="return confirm('سيتم إيقاف الخدمة مع الاحتفاظ بسجلاتها السابقة. هل تريد المتابعة؟')">
                   @csrf @method('DELETE')<button class="btn btn-red btn-sm" type="submit">إيقاف</button>
                 </form>
+                @endsystemPermission
               @endif
             </div></td>
           </tr>

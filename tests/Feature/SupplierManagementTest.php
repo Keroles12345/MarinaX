@@ -14,6 +14,7 @@ class SupplierManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpSystemPermissionTables();
 
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
@@ -87,6 +88,7 @@ class SupplierManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->get(route('accounting.suppliers'))
@@ -140,6 +142,7 @@ class SupplierManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
         $supplierPage = route('accounting.suppliers');
 
         $this->actingAs($admin, 'admin')

@@ -9,15 +9,21 @@
     <input id="search" type="text" class="search-inline" placeholder="🔍 بحث برقم أو اسم...">
     <div class="toolbar">
       @if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
+      @systemPermission('accounts', 'create')
       <button class="btn btn-teal btn-sm" onclick="openAccModal()">➕ حساب جديد</button>
+      @endsystemPermission
       @endif
       @if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
+      @systemPermission('accounts', 'update')
       <button class="btn btn-dark btn-sm" onclick="openModal('importModal')">📥 استيراد</button>
+      @endsystemPermission
       @endif
       <a class="btn btn-dark btn-sm" href="/templates/accounts.xlsx">📄 القالب</a>
       <a class="btn btn-gold btn-sm" href="/accounts/export.xlsx">📊 تصدير Excel</a>
       @if($user->role === 'admin')
+      @systemPermission('accounts', 'delete')
       <button class="btn btn-red btn-sm" onclick="wipeAll()">🗑️ مسح الشجرة كاملة</button>
+      @endsystemPermission
       @endif
     </div>
   </div>
@@ -90,11 +96,10 @@
 @section('scripts')
 <script>
 let ACCOUNTS = [];
-@if(in_array($user->role, ['admin', 'accountant', 'account_user'], true))
-const CAN_MANAGE_ACCOUNTS = true;
-@else
-const CAN_MANAGE_ACCOUNTS = false;
-@endif
+@php($canEditAccounts = in_array($user->role, ['admin', 'accountant', 'account_user'], true) && \App\Support\SystemPermissions::allows($user, 'accounts', 'update'))
+@php($canDeleteAccounts = $user->role === 'admin' && \App\Support\SystemPermissions::allows($user, 'accounts', 'delete'))
+const CAN_EDIT_ACCOUNTS = @json($canEditAccounts);
+const CAN_DELETE_ACCOUNTS = @json($canDeleteAccounts);
 
 async function load() {
   try {
@@ -119,10 +124,10 @@ function render(list) {
       <td class="num">${fmt(Math.abs(Number(a.current_balance || 0)))} <span class="hint">${accountBalanceSide(a.current_balance)}${a.current_balance_includes_children ? ' · يشمل الفروع' : ''}</span></td>
       <td class="num ${a.budget > 0 ? 'budget-cell' : ''}">${a.budget > 0 ? fmt(a.budget) : '<span class="badge gray">—</span>'}</td>
       <td class="num">
-        ${CAN_MANAGE_ACCOUNTS ? `
+        ${CAN_EDIT_ACCOUNTS ? `
         <button class="btn btn-sm btn-dark act-btn" title="تعديل" onclick='editAcc(${JSON.stringify({id:a.id, acc_no:a.acc_no, name:a.name, type:a.type, opening_balance:a.opening_balance, budget:a.budget, is_system:a.is_system})})'>✏️</button>
-        ${a.is_system ? '' : `<button class="btn btn-sm btn-red act-btn" title="حذف" onclick="delAcc(${a.id}, '${esc(a.acc_no)}')">🗑️</button>`}
         ` : ''}
+        ${CAN_DELETE_ACCOUNTS && !a.is_system ? `<button class="btn btn-sm btn-red act-btn" title="حذف" onclick="delAcc(${a.id}, '${esc(a.acc_no)}')">🗑️</button>` : ''}
       </td>
     </tr>`).join('');
 }

@@ -14,6 +14,7 @@ class AdminUserTenantAssignmentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpSystemPermissionTables();
 
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
@@ -79,6 +80,7 @@ class AdminUserTenantAssignmentTest extends TestCase
             'tenant_id' => $tenant->id,
             'is_super_admin' => false,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->postJson('/api/users', [

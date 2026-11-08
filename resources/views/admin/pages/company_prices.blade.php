@@ -9,7 +9,9 @@
   <div class="panel-head">
     <h3>أسعار الشركات والرحلات — {{ $prices->count() }}</h3>
     <span class="badge posted">العملة الأساسية: {{ $currency->name }} ({{ $currency->code }})</span>
+    @if(\App\Support\SystemPermissions::allows($user, 'company_prices', 'create') || \App\Support\SystemPermissions::allows($user, 'company_prices', 'update'))
     <button class="btn btn-gold" type="button" onclick="openPriceModal()">＋ إضافة / تعديل سعر</button>
+    @endif
   </div>
   <div class="panel-body hint">الأسعار تُسجل بالجنيه المصري، ثم تُحوّل لعملة الحجز عند تسجيل العملية.</div>
   <div class="panel-head"><input id="price-search" type="search" class="search-inline" placeholder="🔍 بحث باسم الشركة أو الرحلة..."></div>
@@ -25,10 +27,12 @@
             <td class="num">{{ number_format((float) $price->price_child, 2) }}</td>
             <td class="num">{{ number_format((float) $price->price_infant, 2) }}</td>
             <td>
+              @systemPermission('company_prices', 'update')
               <button class="btn btn-dark btn-sm" type="button" data-edit-price
                 data-company="{{ $price->id_company }}" data-trip="{{ $price->id_trip }}"
                 data-adult="{{ $price->price_adult }}" data-child="{{ $price->price_child }}"
                 data-infant="{{ $price->price_infant }}">تعديل الأسعار</button>
+              @endsystemPermission
             </td>
           </tr>
         @empty

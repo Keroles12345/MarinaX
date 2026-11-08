@@ -14,7 +14,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.hotels', ['include_archived' => 1]) }}">عرض المؤرشف</a>
     @endif
+    @systemPermission('hotels', 'create')
     <button class="btn btn-gold" type="button" onclick="openHotelModal('create-hotel-modal')">＋ إضافة فندق</button>
+    @endsystemPermission
   </div>
   <div class="panel-body hint">الفنادق خاصة بشركتك. اربط الفندق بمنطقة نشطة ليظهر لموظفي المنطقة، واستخدم صفحة <a href="{{ route('accounting.trip-hotels') }}">ربط الرحلات بالفنادق</a> لإتاحة الفنادق للرحلات.</div>
   <div class="panel-head"><input id="hotel-search" type="search" class="search-inline" placeholder="🔍 بحث بالاسم أو المنطقة..."></div>
@@ -27,15 +29,19 @@
           <td dir="auto">{{ $hotel->phone ?: '—' }}</td><td dir="auto">{{ $hotel->email ?: '—' }}</td>
           <td>{{ $hotel->trip_hotels_count }}</td><td>{{ $hotel->status ? 'نشط' : 'مؤرشف' }}</td>
           <td><div class="j-actions">
+            @systemPermission('hotels', 'update')
             <button class="btn btn-dark btn-sm" type="button" data-edit-hotel
               data-id="{{ $hotel->id }}" data-url="{{ route('accounting.hotels.update', $hotel) }}"
               data-name="{{ $hotel->name }}" data-region="{{ $hotel->region_id }}"
               data-address="{{ $hotel->address }}" data-phone="{{ $hotel->phone }}"
               data-email="{{ $hotel->email }}" data-status="{{ $hotel->status ? '1' : '0' }}">تعديل</button>
+            @endsystemPermission
             @if($hotel->status)
+              @systemPermission('hotels', 'delete')
               <form method="POST" action="{{ route('accounting.hotels.destroy', $hotel) }}" onsubmit="return confirm('سيتم أرشفة الفندق مع الاحتفاظ بالحجوزات السابقة. متابعة؟')">
                 @csrf @method('DELETE')<button class="btn btn-red btn-sm" type="submit">أرشفة</button>
               </form>
+              @endsystemPermission
             @endif
           </div></td>
         </tr>

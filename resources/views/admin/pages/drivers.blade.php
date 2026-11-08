@@ -15,7 +15,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.drivers', ['include_archived' => 1]) }}">عرض الموقوف</a>
     @endif
+    @systemPermission('drivers', 'create')
     <button class="btn btn-gold" type="button" onclick="openDriverModal('create-driver-modal')">＋ إضافة سائق سيارة / أتوبيس</button>
+    @endsystemPermission
   </div>
   <div class="panel-body hint">اربط السائق بسيارة أو أتوبيس نشط ليظهر ضمن خيارات التشغيل اليومية.</div>
   <div class="tbl-wrap"><table class="tbl">
@@ -28,18 +30,24 @@
           <td>{{ $driver->vehicleDrivers->map(fn ($link) => $link->vehicle?->name)->filter()->implode('، ') ?: 'غير مربوط' }}</td>
           <td>{{ $driver->status ?: 'متاح' }}</td>
           <td><div class="j-actions">
+            @systemPermission('drivers', 'update')
             <button class="btn btn-dark btn-sm" type="button" data-edit-driver
               data-url="{{ route('accounting.drivers.update', $driver) }}"
               data-name="{{ $driver->name }}" data-phone="{{ $driver->phone }}" data-email="{{ $driver->email }}"
               data-license="{{ $driver->license_number }}" data-license-date="{{ $driver->LicenseDate?->format('Y-m-d') }}"
               data-leave="{{ $driver->degreeOfLeave }}" data-status="{{ $driver->status }}"
               data-vehicles="{{ $vehicleIds->toJson() }}">تعديل</button>
+            @endsystemPermission
             @if($driver->status === 'inactive')
+              @systemPermission('drivers', 'update')
               <form method="POST" action="{{ route('accounting.drivers.restore', $driver) }}">@csrf @method('PUT')<button class="btn btn-gold btn-sm" type="submit">تفعيل</button></form>
+              @endsystemPermission
             @else
+              @systemPermission('drivers', 'delete')
               <form method="POST" action="{{ route('accounting.drivers.destroy', $driver) }}" onsubmit="return confirm('سيتم إيقاف السائق وفك ربطه بالسيارات والأتوبيسات. متابعة؟')">
                 @csrf @method('DELETE')<button class="btn btn-red btn-sm" type="submit">إيقاف</button>
               </form>
+              @endsystemPermission
             @endif
           </div></td>
         </tr>
@@ -48,6 +56,7 @@
   </table></div>
 </div>
 
+@systemPermission('drivers', 'create')
 <div class="modal-overlay" id="create-driver-modal" role="dialog" aria-modal="true" aria-labelledby="create-driver-title">
   <div class="modal wide">
     <div class="modal-head"><h3 id="create-driver-title">إضافة سائق سيارة أو أتوبيس</h3><button class="modal-close" type="button" onclick="closeDriverModal('create-driver-modal')">×</button></div>
@@ -69,7 +78,9 @@
     </form>
   </div>
 </div>
+@endsystemPermission
 
+@systemPermission('drivers', 'update')
 <div class="modal-overlay" id="edit-driver-modal" role="dialog" aria-modal="true" aria-labelledby="edit-driver-title">
   <div class="modal wide">
     <div class="modal-head"><h3 id="edit-driver-title">تعديل بيانات السائق</h3><button class="modal-close" type="button" onclick="closeDriverModal('edit-driver-modal')">×</button></div>
@@ -86,6 +97,7 @@
           <div class="field"><label>الحالة</label><input id="edit-driver-status" name="status" maxlength="20"></div>
           <div class="field"><label>السيارات والأتوبيسات</label><select id="edit-driver-vehicles" name="vehicle_ids[]" multiple size="4">@foreach($vehicles as $vehicle)<option value="{{ $vehicle->id }}">{{ $vehicle->name }}</option>@endforeach</select></div>
         </div>
+        @endsystemPermission
       </div>
       <div class="modal-foot"><button class="btn btn-gold" type="submit">حفظ التعديلات</button><button class="btn btn-dark" type="button" onclick="closeDriverModal('edit-driver-modal')">إلغاء</button></div>
     </form>

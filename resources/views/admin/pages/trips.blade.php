@@ -15,7 +15,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.trips', ['include_archived' => 1]) }}">عرض المؤرشف</a>
     @endif
+    @systemPermission('trips', 'create')
     <button class="btn btn-gold" type="button" onclick="openTripModal('create-trip-modal')">＋ إضافة رحلة</button>
+    @endsystemPermission
   </div>
   <div class="panel-body hint">الرحلات خاصة بشركتك. اربط الرحلة بمنطقة نشطة لتظهر لموظفي المنطقة.</div>
   <div class="panel-head"><input id="trip-search" type="search" class="search-inline" placeholder="🔍 بحث بالاسم أو المنطقة..."></div>
@@ -28,15 +30,19 @@
           <td>{{ $trip->time_trip ? substr((string) $trip->time_trip, 0, 5) : '—' }}</td>
           <td>{{ $trip->active_hotels_count }}</td><td>{{ $trip->status ? 'نشطة' : 'مؤرشفة' }}</td>
           <td><div class="j-actions">
+            @systemPermission('trips', 'update')
             <button class="btn btn-dark btn-sm" type="button" data-edit-trip
               data-id="{{ $trip->id }}" data-url="{{ route('accounting.trips.update', $trip) }}"
               data-name="{{ $trip->name }}" data-region="{{ $trip->region_id }}"
               data-time="{{ $trip->time_trip ? substr((string) $trip->time_trip, 0, 5) : '' }}"
               data-description="{{ $trip->description }}" data-status="{{ $trip->status ? '1' : '0' }}">تعديل</button>
+            @endsystemPermission
             @if($trip->status)
+              @systemPermission('trips', 'delete')
               <form method="POST" action="{{ route('accounting.trips.destroy', $trip) }}" onsubmit="return confirm('سيتم أرشفة الرحلة مع الاحتفاظ بالحجوزات السابقة. متابعة؟')">
                 @csrf @method('DELETE')<button class="btn btn-red btn-sm" type="submit">أرشفة</button>
               </form>
+              @endsystemPermission
             @endif
           </div></td>
         </tr>

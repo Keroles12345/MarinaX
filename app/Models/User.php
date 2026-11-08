@@ -25,6 +25,7 @@ use App\Models\Concerns\BelongsToTenant;
     'status',
     'tenant_id',
     'is_super_admin',
+    'system_permissions_managed',
 ])]
 #[Hidden(['password', 'password_hash', 'security_answer_hash', 'remember_token'])]
 class User extends Authenticatable
@@ -62,6 +63,7 @@ use HasFactory, Notifiable, HasRoles, BelongsToTenant;
             'status' => 'boolean',
             'tenant_id' => 'integer',
             'is_super_admin' => 'boolean',
+            'system_permissions_managed' => 'boolean',
         ];
     }
 }

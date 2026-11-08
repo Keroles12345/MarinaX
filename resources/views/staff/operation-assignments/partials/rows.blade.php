@@ -36,7 +36,14 @@
             @if($assignment->accounting_entry_id)
                 <span class="text-xs text-slate-500">مقفلة بعد الترحيل</span>
             @else
-                <div class="flex justify-end gap-2"><a href="{{ route('operation-assignments.edit', $assignment) }}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-700">Edit</a><form method="POST" action="{{ route('operation-assignments.destroy', $assignment) }}" onsubmit="return confirm('Delete this assignment? This cannot be undone.')">@csrf @method('DELETE')<button class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">Delete</button></form></div>
+                <div class="flex justify-end gap-2">
+                    @systemPermission('operation_assignments', 'update')
+                    <a href="{{ route('operation-assignments.edit', $assignment) }}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-500 hover:text-teal-700">Edit</a>
+                    @endsystemPermission
+                    @systemPermission('operation_assignments', 'delete')
+                    <form method="POST" action="{{ route('operation-assignments.destroy', $assignment) }}" onsubmit="return confirm('Delete this assignment? This cannot be undone.')">@csrf @method('DELETE')<button class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">Delete</button></form>
+                    @endsystemPermission
+                </div>
             @endif
         </td>
     </tr>

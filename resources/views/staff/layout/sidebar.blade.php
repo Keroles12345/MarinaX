@@ -2,31 +2,43 @@
     <div class="staff-brand">{{ __('بوابة العمليات') }}</div>
 
     <nav class="staff-nav" aria-label="{{ __('الرئيسية') }}">
-        <details class="staff-nav-category">
-            <summary class="staff-nav-title">{{ __('الرئيسية') }}</summary>
-            <div class="staff-nav-links">
-                <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <span class="staff-nav-icon">🏠</span>{{ __('لوحة الموظف') }}
-                </a>
-            </div>
-        </details>
+        @systemPermission('staff_dashboard', 'view')
+            <details class="staff-nav-category">
+                <summary class="staff-nav-title">{{ __('الرئيسية') }}</summary>
+                <div class="staff-nav-links">
+                    <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <span class="staff-nav-icon">🏠</span>{{ __('لوحة الموظف') }}
+                    </a>
+                </div>
+            </details>
+        @endsystemPermission
 
-        <details class="staff-nav-category" {{ request()->routeIs('operatoins.dashboard', 'daily-ops.*', 'operation-assignments.*') ? 'open' : '' }}>
-            <summary class="staff-nav-title">{{ __('العمليات') }}</summary>
-            <div class="staff-nav-links">
-                @can('operations.edit')
+        @if(
+            \App\Support\SystemPermissions::allows(auth('staff')->user(), 'operations', 'view')
+            || \App\Support\SystemPermissions::allows(auth('staff')->user(), 'daily_operations', 'view')
+            || \App\Support\SystemPermissions::allows(auth('staff')->user(), 'operation_assignments', 'view')
+        )
+            <details class="staff-nav-category" {{ request()->routeIs('operatoins.dashboard', 'daily-ops.*', 'operation-assignments.*') ? 'open' : '' }}>
+                <summary class="staff-nav-title">{{ __('العمليات') }}</summary>
+                <div class="staff-nav-links">
+                @systemPermission('operations', 'view')
                     <a href="{{ route('operatoins.dashboard') }}" class="{{ request()->routeIs('operatoins.dashboard') ? 'active' : '' }}">
                         <span class="staff-nav-icon">🧭</span>{{ __('اختيار الرحلة') }}
                     </a>
-                @endcan
+                @endsystemPermission
+                @systemPermission('daily_operations', 'view')
                 <a href="{{ route('daily-ops.index') }}" class="{{ request()->routeIs('daily-ops.*') ? 'active' : '' }}">
                     <span class="staff-nav-icon">📋</span>{{ __('العمليات اليومية') }}
                 </a>
+                @endsystemPermission
+                @systemPermission('operation_assignments', 'view')
                 <a href="{{ route('operation-assignments.index') }}" class="{{ request()->routeIs('operation-assignments.*') ? 'active' : '' }}">
                     <span class="staff-nav-icon">👥</span>{{ __('توزيع العمليات') }}
                 </a>
-            </div>
-        </details>
+                @endsystemPermission
+                </div>
+            </details>
+        @endif
 
         @if(Route::has('staff.logout'))
             <form action="{{ route('staff.logout') }}" method="POST">

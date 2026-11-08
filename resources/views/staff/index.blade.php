@@ -5,11 +5,15 @@
 
 @section('body')
     <div class="quick-actions">
+        @systemPermission('daily_operations', 'view')
         <a href="{{ route('daily-ops.index') }}" class="btn btn-teal">📋 {{ __('العمليات اليومية') }}</a>
-        @can('operations.edit')
+        @endsystemPermission
+        @systemPermission('operations', 'view')
             <a href="{{ route('operatoins.dashboard') }}" class="btn btn-gold">🧭 {{ __('اختيار الرحلة') }}</a>
-        @endcan
+        @endsystemPermission
+        @systemPermission('operation_assignments', 'view')
         <a href="{{ route('operation-assignments.index') }}" class="btn btn-dark">👥 {{ __('توزيع العمليات') }}</a>
+        @endsystemPermission
     </div>
 
     <div class="cards-grid">

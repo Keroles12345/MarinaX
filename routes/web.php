@@ -15,6 +15,7 @@ use App\Http\Middleware\StaffOperationsMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\SuperAdmin\TenantController;
+use App\Http\Controllers\SuperAdmin\SystemPermissionController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -43,6 +44,8 @@ Route::get('/dashboard', [StaffAuthController::class, 'showLogin'])
         Route::get('/companies/create', [TenantController::class, 'createTenantPage'])->name('tenants.create');
         Route::get('/users', [TenantController::class, 'usersIndex'])->name('users.index');
         Route::get('/users/create', [TenantController::class, 'createUserPage'])->name('users.create');
+        Route::get('/permissions', [SystemPermissionController::class, 'index'])->name('permissions.index');
+        Route::post('/permissions', [SystemPermissionController::class, 'update'])->name('permissions.update');
         Route::post('/logout', [TenantController::class, 'logout'])->name('logout');
         Route::post('/companies', [TenantController::class, 'store'])->name('tenants.store');
         Route::put('/companies/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
@@ -56,15 +59,15 @@ Route::post('/staff/login', [StaffController::class,'loginn'])->name('staff.logi
 Route::post('/admin/login', [AdminController::class,'loginn'])->name('admin.login.handle');
 
 
-Route::middleware('StaffSales')->group(function () {
+Route::middleware(['StaffSales', 'system-permission'])->group(function () {
    Route::get('/staff/sales/dashboard', function () {
         return view('dashboards.staff.sales.dasboardSales');
     })->name('sales.dashboard');
 
     });
-    Route::middleware('staff')->group(function () {
+    Route::middleware(['staff', 'system-permission'])->group(function () {
     Route::get('/staff/operations/dashboard', [StaffOperations::class, 'showOperation'])
-    ->name('operatoins.dashboard')->middleware('permission:operations.delete');
+    ->name('operatoins.dashboard');
     Route::get('/staff/operations', [StaffController::class, 'showdashboard'])
     ->name('dashboard');
    Route::post('/staff/logout', [StaffController::class, 'logout'])
@@ -91,14 +94,14 @@ Route::get('/ticket/{ticket}', [StaffOperations::class, 'showTicket'])
     ->name('operation.ticket');
 
 
-    Route::middleware('StaffReseller')->group(function () {
+    Route::middleware(['StaffReseller', 'system-permission'])->group(function () {
 
     Route::get('/staff/reseller/dashboard', function () {
         return view('dashboards.staff.Reseller.dashboardReseller');
     })->name('reseller.dashboard');
     });
 
-Route::middleware('accounting-role:admin,accountant,viewer,account_user')->group(function () {
+Route::middleware(['accounting-role:admin,accountant,viewer,account_user', 'system-permission'])->group(function () {
 
     Route::get('/accounting', [AccountingController::class, 'dashboard'])->name('accounting.home');
     Route::get('/employee-custody', [EmployeeCustodyController::class, 'index'])
@@ -202,11 +205,11 @@ Route::middleware('accounting-role:admin,accountant,viewer,account_user')->group
     Route::get('/templates/journal.xlsx', [AccountingController::class, 'journalTemplate']);
 });
 
-Route::middleware('admin')->group(function(){
+Route::middleware(['admin', 'system-permission'])->group(function(){
  Route::get('/admin/dashboard', [AdminController::class, 'showdashboard'])
     ->name('admin.dashboard');
 });
- Route::middleware('accounting-role:admin')->group(function () {
+ Route::middleware(['accounting-role:admin', 'system-permission'])->group(function () {
      Route::get('/operation-resources/trips-hotels', [OperationResourcesController::class, 'tripsAndHotels'])->name('accounting.trips-hotels');
      Route::get('/operation-resources/trips', [OperationResourcesController::class, 'trips'])->name('accounting.trips');
      Route::get('/operation-resources/hotels', [OperationResourcesController::class, 'hotels'])->name('accounting.hotels');
@@ -249,7 +252,7 @@ Route::middleware('admin')->group(function(){
      Route::delete('/operation-resources/boat-drivers/{driver}', [OperationResourcesController::class, 'archiveBoatDriver'])->name('accounting.boat-drivers.destroy');
      Route::put('/operation-resources/boat-drivers/{driver}/restore', [OperationResourcesController::class, 'restoreBoatDriver'])->name('accounting.boat-drivers.restore');
  });
- Route::middleware('supervisor')->group(function(){
+ Route::middleware(['supervisor', 'system-permission'])->group(function(){
    Route::get('/supervisor/dashboard', function () {
         return view('dashboards.supervisor.dashboard');
     })->name('supervisor.dashboard');

@@ -14,6 +14,7 @@ class DriverManagementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpSystemPermissionTables();
 
         Schema::create('tenants', function (Blueprint $table) {
             $table->id();
@@ -139,6 +140,7 @@ class DriverManagementTest extends TestCase
             'status' => true,
             'tenant_id' => $tenantId,
         ]);
+        $this->grantAllSystemPermissions($admin);
 
         $this->actingAs($admin, 'admin')
             ->get(route('accounting.drivers'))

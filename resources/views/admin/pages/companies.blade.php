@@ -13,7 +13,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.companies', ['include_archived' => 1]) }}">عرض الموقوف</a>
     @endif
+    @systemPermission('companies', 'create')
     <button class="btn btn-gold" type="button" onclick="openCompanyModal('create-company-modal')">＋ إضافة شركة</button>
+    @endsystemPermission
   </div>
   <div class="tbl-wrap">
     <table class="tbl">
@@ -27,15 +29,19 @@
             <td>{{ $company->address ?: '—' }}</td>
             <td>{{ $company->status ? 'نشطة' : 'موقوفة' }}</td>
             <td><div class="j-actions">
+              @systemPermission('companies', 'update')
               <button class="btn btn-dark btn-sm" type="button" data-edit-company
                 data-id="{{ $company->id }}" data-url="{{ route('accounting.companies.update', $company) }}"
                 data-name="{{ $company->name }}" data-email="{{ $company->email }}"
                 data-phone="{{ $company->phone }}" data-address="{{ $company->address }}"
                 data-status="{{ $company->status ? '1' : '0' }}">تعديل</button>
+              @endsystemPermission
               @if($company->status)
+                @systemPermission('companies', 'delete')
                 <form method="POST" action="{{ route('accounting.companies.destroy', $company) }}" onsubmit="return confirm('سيتم إيقاف الشركة مع الاحتفاظ بالحجوزات والأسعار المرتبطة. هل تريد المتابعة؟')">
                   @csrf @method('DELETE')<button class="btn btn-red btn-sm" type="submit">إيقاف</button>
                 </form>
+                @endsystemPermission
               @endif
             </div></td>
           </tr>
@@ -47,6 +53,7 @@
   </div>
 </div>
 
+@systemPermission('companies', 'create')
 <div class="modal-overlay" id="create-company-modal" role="dialog" aria-modal="true" aria-labelledby="create-company-title">
   <div class="modal">
     <div class="modal-head"><h3 id="create-company-title">إضافة شركة</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="closeCompanyModal('create-company-modal')">×</button></div>
@@ -65,7 +72,9 @@
     </form>
   </div>
 </div>
+@endsystemPermission
 
+@systemPermission('companies', 'update')
 <div class="modal-overlay" id="edit-company-modal" role="dialog" aria-modal="true" aria-labelledby="edit-company-title">
   <div class="modal">
     <div class="modal-head"><h3 id="edit-company-title">تعديل بيانات الشركة</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="closeCompanyModal('edit-company-modal')">×</button></div>
@@ -87,6 +96,7 @@
     </form>
   </div>
 </div>
+@endsystemPermission
 @endsection
 
 @section('scripts')

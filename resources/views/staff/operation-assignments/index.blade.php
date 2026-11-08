@@ -4,7 +4,9 @@
 <div class="py-6">
     <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div><p class="text-sm font-semibold uppercase tracking-wider text-teal-700">Operations</p><h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900">Resource assignments</h1><p class="mt-1 text-sm text-slate-500">Manage boats, vehicles and their assigned drivers.</p></div>
+        @systemPermission('operation_assignments', 'create')
         <a href="{{ route('operation-assignments.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-800">＋ New assignment</a>
+        @endsystemPermission
     </div>
 
     @if(session('status'))<div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('status') }}</div>@endif
@@ -80,6 +82,7 @@
     </div>
 </form>
 
+@systemPermission('operation_assignments', 'update')
 <form id="accounting-form" method="POST" action="{{ route('operation-assignments.post-to-accounting') }}">
     @csrf
 </form>
@@ -88,6 +91,7 @@
         <p class="font-semibold text-teal-950">ترحيل العمليات المحددة إلى الحسابات</p>
         <p class="mt-1 text-xs text-teal-800">يُرحّل إيراد كل مركب أو سيارة إلى حساب فرعي تحت إيرادات العمليات الداخلية أو الخارجية حسب الملكية؛ والسيارات تُعامل كتشغيل داخلي.</p>
     </div>
+    @endsystemPermission
     <div class="flex flex-wrap items-end gap-3">
         <label class="grid gap-1 text-xs font-semibold text-slate-700">
             المنطقة المحاسبية

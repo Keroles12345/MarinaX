@@ -6,7 +6,9 @@
 <div class="panel">
   <div class="panel-head">
     <h3>🧭 ربط الرحلات بالمناطق</h3>
+    @systemPermission('trip_hotels', 'view')
     <a class="btn btn-teal btn-sm" href="{{ route('accounting.trip-hotels') }}">🏨 ربط الرحلات بالفنادق</a>
+    @endsystemPermission
   </div>
   <div class="panel-body hint">
     الرحلة والفندق يجب أن يكونا في المنطقة نفسها. الرحلات غير المصنفة لا تظهر للموظفين.
@@ -27,7 +29,9 @@
     <input id="region-search" type="search" class="search-inline" placeholder="🔍 بحث عن منطقة...">
     <div class="toolbar">
       <button class="btn btn-dark btn-sm" id="toggle-archived" type="button">عرض المعطّل</button>
+      @systemPermission('regions', 'create')
       <button class="btn btn-gold" type="button" id="add-region">＋ إضافة منطقة</button>
+      @endsystemPermission
     </div>
   </div>
   <div id="regions-message" class="panel-body" hidden></div>
@@ -60,12 +64,14 @@
   </div>
 </div>
 
+@if(\App\Support\SystemPermissions::allows($user, 'regions', 'create') || \App\Support\SystemPermissions::allows($user, 'regions', 'update'))
 <div class="modal-overlay" id="region-modal" role="dialog" aria-modal="true" aria-labelledby="region-modal-title">
   <div class="modal">
     <div class="modal-head">
       <h3 id="region-modal-title">إضافة منطقة جديدة</h3>
       <button class="modal-close" type="button" data-close-modal aria-label="إغلاق">×</button>
     </div>
+    @endif
     <form id="region-form">
       <div class="modal-body">
         <input type="hidden" id="region-id">
@@ -92,6 +98,9 @@ let TRIPS = [];
 let HOTEL_REGIONS = [];
 let TRIP_REGIONS = [];
 let showInactiveRegions = false;
+const CAN_CREATE_REGIONS = @json(\App\Support\SystemPermissions::allows($user, 'regions', 'create'));
+const CAN_UPDATE_REGIONS = @json(\App\Support\SystemPermissions::allows($user, 'regions', 'update'));
+const CAN_DELETE_REGIONS = @json(\App\Support\SystemPermissions::allows($user, 'regions', 'delete'));
 
 async function loadRegions() {
   const body = document.getElementById('regions-body');
@@ -148,7 +157,7 @@ function renderRegionTrips() {
     return `<tr>
       <td>${esc(trip.name)}</td>
       <td>
-        <select class="trip-region-select" data-trip-id="${Number(trip.id)}">
+        <select class="trip-region-select" data-trip-id="${Number(trip.id)}" ${CAN_UPDATE_REGIONS ? '' : 'disabled'}>
           <option value="">غير مصنفة</option>
           ${options}
         </select>
@@ -174,7 +183,7 @@ function renderRegionHotels() {
     return `<tr>
       <td>${esc(hotel.name)}</td>
       <td>
-        <select class="hotel-region-select" data-hotel-id="${Number(hotel.id)}">
+        <select class="hotel-region-select" data-hotel-id="${Number(hotel.id)}" ${CAN_UPDATE_REGIONS ? '' : 'disabled'}>
           <option value="">غير مصنف</option>
           ${options}
         </select>
@@ -206,11 +215,13 @@ function renderRegions() {
       <td class="num">${Number(region.usage_count) || '—'}</td>
       <td class="num">
         <div class="j-actions">
-          <button class="btn btn-sm btn-dark" type="button" data-region-action="edit" data-id="${Number(region.id)}">تعديل</button>
-          ${region.is_active
+          ${CAN_UPDATE_REGIONS ? `<button class="btn btn-sm btn-dark" type="button" data-region-action="edit" data-id="${Number(region.id)}">تعديل</button>` : ''}
+          ${CAN_UPDATE_REGIONS && region.is_active
             ? `<button class="btn btn-sm btn-gold" type="button" data-region-action="deactivate" data-id="${Number(region.id)}">تعطيل</button>`
-            : `<button class="btn btn-sm btn-teal" type="button" data-region-action="activate" data-id="${Number(region.id)}">تفعيل</button>`}
-          ${Number(region.usage_count) > 0
+            : CAN_UPDATE_REGIONS ? `<button class="btn btn-sm btn-teal" type="button" data-region-action="activate" data-id="${Number(region.id)}">تفعيل</button>` : ''}
+          ${!CAN_DELETE_REGIONS
+            ? ''
+            : Number(region.usage_count) > 0
             ? '<button class="btn btn-sm btn-dark" type="button" disabled title="لا يمكن حذف منطقة مرتبطة ببيانات">حذف</button>'
             : `<button class="btn btn-sm btn-red" type="button" data-region-action="delete" data-id="${Number(region.id)}">حذف</button>`}
         </div>
@@ -220,6 +231,7 @@ function renderRegions() {
 }
 
 function openRegionModal(region = null) {
+  if (region ? !CAN_UPDATE_REGIONS : !CAN_CREATE_REGIONS) return;
   document.getElementById('region-modal-title').textContent = region ? 'تعديل المنطقة' : 'إضافة منطقة جديدة';
   document.getElementById('region-id').value = region?.id || '';
   document.getElementById('region-name').value = region?.name || '';
@@ -227,7 +239,7 @@ function openRegionModal(region = null) {
   document.getElementById('region-name').focus();
 }
 
-document.getElementById('add-region').addEventListener('click', () => openRegionModal());
+document.getElementById('add-region')?.addEventListener('click', () => openRegionModal());
 document.getElementById('toggle-archived').addEventListener('click', () => {
   showInactiveRegions = !showInactiveRegions;
   renderRegions();

@@ -15,7 +15,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.boat-drivers', ['include_archived' => 1]) }}">عرض الموقوف</a>
     @endif
+    @systemPermission('boat_drivers', 'create')
     <button class="btn btn-gold" type="button" onclick="openBoatDriverModal('create-boat-driver-modal')">＋ إضافة سائق مركب</button>
+    @endsystemPermission
   </div>
   <div class="panel-body hint">اربط كل سائق بمركب نشط ليظهر ضمن خيارات التشغيل اليومية.</div>
   <div class="tbl-wrap"><table class="tbl">
@@ -27,15 +29,21 @@
           <td>{{ $driver->license_number ?: '—' }}</td><td>{{ $driver->is_active ? 'نشط' : 'موقوف' }}</td>
           <td><div class="j-actions">
             @if($driver->is_active)
+              @systemPermission('boat_drivers', 'update')
               <button class="btn btn-dark btn-sm" type="button" data-edit-boat-driver
                 data-url="{{ route('accounting.boat-drivers.update', $driver->id) }}"
                 data-name="{{ $driver->name }}" data-phone="{{ $driver->phone }}"
                 data-license="{{ $driver->license_number }}" data-boat="{{ $driver->boat_id }}">تعديل</button>
+              @endsystemPermission
+              @systemPermission('boat_drivers', 'delete')
               <form method="POST" action="{{ route('accounting.boat-drivers.destroy', $driver->id) }}" onsubmit="return confirm('سيتم إيقاف سائق المركب. متابعة؟')">
                 @csrf @method('DELETE')<button class="btn btn-red btn-sm" type="submit">إيقاف</button>
               </form>
+              @endsystemPermission
             @else
+              @systemPermission('boat_drivers', 'update')
               <form method="POST" action="{{ route('accounting.boat-drivers.restore', $driver->id) }}">@csrf @method('PUT')<button class="btn btn-gold btn-sm" type="submit">تفعيل</button></form>
+              @endsystemPermission
             @endif
           </div></td>
         </tr>
@@ -44,6 +52,7 @@
   </table></div>
 </div>
 
+@systemPermission('boat_drivers', 'create')
 <div class="modal-overlay" id="create-boat-driver-modal" role="dialog" aria-modal="true" aria-labelledby="create-boat-driver-title">
   <div class="modal">
     <div class="modal-head"><h3 id="create-boat-driver-title">إضافة سائق مركب</h3><button class="modal-close" type="button" onclick="closeBoatDriverModal('create-boat-driver-modal')">×</button></div>
@@ -60,7 +69,9 @@
     </form>
   </div>
 </div>
+@endsystemPermission
 
+@systemPermission('boat_drivers', 'update')
 <div class="modal-overlay" id="edit-boat-driver-modal" role="dialog" aria-modal="true" aria-labelledby="edit-boat-driver-title">
   <div class="modal">
     <div class="modal-head"><h3 id="edit-boat-driver-title">تعديل سائق المركب</h3><button class="modal-close" type="button" onclick="closeBoatDriverModal('edit-boat-driver-modal')">×</button></div>
@@ -72,6 +83,7 @@
         <div class="field"><label>الهاتف</label><input id="edit-boat-driver-phone" name="phone" maxlength="255"></div>
         <div class="field"><label>رقم الرخصة</label><input id="edit-boat-driver-license" name="license_number" maxlength="255"></div>
       </div>
+      @endsystemPermission
       <div class="modal-foot"><button class="btn btn-gold" type="submit">حفظ التعديلات</button><button class="btn btn-dark" type="button" onclick="closeBoatDriverModal('edit-boat-driver-modal')">إلغاء</button></div>
     </form>
   </div>

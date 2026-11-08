@@ -78,6 +78,7 @@
                         <a href="{{ route('superadmin.tenants.create') }}" class="{{ request()->routeIs('superadmin.tenants.create') ? 'active' : '' }}"><span class="superadmin-nav-icon">➕</span>{{ __('إضافة شركة') }}</a>
                         <a href="{{ route('superadmin.users.create') }}" class="{{ request()->routeIs('superadmin.users.create') ? 'active' : '' }}"><span class="superadmin-nav-icon">👤</span>{{ __('إضافة مستخدم') }}</a>
                         <a href="{{ route('superadmin.users.index') }}" class="{{ request()->routeIs('superadmin.users.index') ? 'active' : '' }}"><span class="superadmin-nav-icon">👥</span>{{ __('إدارة المستخدمين') }}</a>
+                        <a href="{{ route('superadmin.permissions.index') }}" class="{{ request()->routeIs('superadmin.permissions.*') ? 'active' : '' }}"><span class="superadmin-nav-icon">🔐</span>{{ __('صلاحيات المستخدمين') }}</a>
                     </div>
                 </details>
                 <form method="post" action="{{ route('superadmin.logout') }}">

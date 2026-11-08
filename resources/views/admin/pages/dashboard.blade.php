@@ -4,19 +4,37 @@
 @section('content')
 
 <div class="quick-actions">
+  @systemPermission('journal', 'create')
   <a href="/journal" class="btn btn-gold">➕ {{ __('قيد يومية جديد') }}</a>
+  @endsystemPermission
+  @systemPermission('reports', 'view')
   <a href="/ledger" class="btn btn-teal">📖 {{ __('كشف حساب') }}</a>
   <a href="/trial-balance" class="btn btn-dark">⚖️ {{ __('ميزان المراجعة') }}</a>
+  @endsystemPermission
   @if(in_array($user->role, ['admin', 'accountant'], true))
+  @systemPermission('employee_custody', 'view')
   <a href="{{ route('employee-custody.index') }}" class="btn btn-teal">💼 {{ __('عهد الموظفين') }}</a>
+  @endsystemPermission
   @endif
+  @systemPermission('boat_revenues', 'view')
   <a href="{{ route('boat-revenues.index') }}" class="btn btn-teal">⛵ {{ __('إيرادات المراكب') }}</a>
+  @endsystemPermission
+  @systemPermission('vehicle_revenues', 'view')
   <a href="{{ route('vehicle-revenues.index') }}" class="btn btn-teal">🚐 {{ __('إيرادات السيارات والأتوبيسات') }}</a>
+  @endsystemPermission
   @if($user->role === 'admin')
+  @systemPermission('users', 'view')
   <a href="{{ route('admin.user-permissions') }}" class="btn btn-dark">🔐 {{ __('صلاحيات المستخدمين') }}</a>
+  @endsystemPermission
+  @systemPermission('regions', 'view')
   <a href="{{ route('accounting.regions') }}" class="btn btn-dark">🗺️ {{ __('إدارة المناطق') }}</a>
+  @endsystemPermission
+  @systemPermission('boats', 'view')
   <a href="{{ route('accounting.boats') }}" class="btn btn-teal">⛵ {{ __('صفحة الأدمن - المراكب') }}</a>
+  @endsystemPermission
+  @systemPermission('vehicles', 'view')
   <a href="{{ route('accounting.vehicles') }}" class="btn btn-dark">🚐 {{ __('صفحة الأدمن - السيارات والتوبيسات') }}</a>
+  @endsystemPermission
   @endif
 </div>
 

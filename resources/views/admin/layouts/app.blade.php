@@ -42,26 +42,40 @@
       <details class="nav-category">
         <summary class="nav-category-title">{{ __('الرئيسية') }}</summary>
         <div class="nav-category-links">
+          @systemPermission($user->role === 'admin' ? 'admin_dashboard' : 'accounting_dashboard', 'view')
           <a href="/accounting" class="{{ request()->getPathInfo() === '/accounting' ? 'active' : '' }}"><span class="ic">🏠</span>{{ __('لوحة التحكم') }}</a>
+          @endsystemPermission
         </div>
       </details>
 
       <details class="nav-category">
         <summary class="nav-category-title">{{ __('المحاسبة والتقارير') }}</summary>
         <div class="nav-category-links">
+          @systemPermission('accounts', 'view')
           <a href="/accounts" class="{{ request()->getPathInfo() === '/accounts' ? 'active' : '' }}"><span class="ic">📚</span>{{ __('دليل الحسابات') }}</a>
           <a href="/accounts/tree" class="{{ request()->getPathInfo() === '/accounts/tree' ? 'active' : '' }}"><span class="ic">🌳</span>{{ __('شجرة الحسابات') }}</a>
+          @endsystemPermission
+          @systemPermission('journal', 'view')
           <a href="/journal" class="{{ request()->getPathInfo() === '/journal' ? 'active' : '' }}"><span class="ic">📒</span>{{ __('دفتر اليومية') }}</a>
+          @endsystemPermission
+          @systemPermission('reports', 'view')
           <a href="/ledger" class="{{ request()->getPathInfo() === '/ledger' ? 'active' : '' }}"><span class="ic">📖</span>{{ __('الأستاذ العام') }}</a>
           <a href="/trial-balance" class="{{ request()->getPathInfo() === '/trial-balance' ? 'active' : '' }}"><span class="ic">⚖️</span>{{ __('ميزان المراجعة') }}</a>
           <a href="/budget" class="{{ request()->getPathInfo() === '/budget' ? 'active' : '' }}"><span class="ic">📊</span>{{ __('الموازنة التقديرية') }}</a>
           <a href="/income-statement" class="{{ request()->getPathInfo() === '/income-statement' ? 'active' : '' }}"><span class="ic">📈</span>{{ __('قائمة الدخل') }}</a>
           <a href="/balance-sheet" class="{{ request()->getPathInfo() === '/balance-sheet' ? 'active' : '' }}"><span class="ic">🏦</span>{{ __('المركز المالي') }}</a>
           <a href="/cash-flow" class="{{ request()->getPathInfo() === '/cash-flow' ? 'active' : '' }}"><span class="ic">💵</span>{{ __('التدفقات النقدية') }}</a>
+          @endsystemPermission
+          @systemPermission('boat_revenues', 'view')
           <a href="{{ route('boat-revenues.index') }}" class="{{ request()->is('boat-revenues') ? 'active' : '' }}"><span class="ic">⛵</span>{{ __('إيرادات المراكب') }}</a>
+          @endsystemPermission
+          @systemPermission('vehicle_revenues', 'view')
           <a href="{{ route('vehicle-revenues.index') }}" class="{{ request()->is('vehicle-revenues') ? 'active' : '' }}"><span class="ic">🚐</span>{{ __('إيرادات السيارات والأتوبيسات') }}</a>
+          @endsystemPermission
           @if(in_array($user->role, ['admin', 'accountant'], true))
+          @systemPermission('employee_custody', 'view')
             <a href="{{ route('employee-custody.index') }}" class="{{ request()->is('employee-custody') ? 'active' : '' }}"><span class="ic">💼</span>{{ __('عهد الموظفين') }}</a>
+          @endsystemPermission
           @endif
         </div>
       </details>
@@ -70,26 +84,54 @@
         <details class="nav-category">
           <summary class="nav-category-title">{{ __('إدارة الموارد') }}</summary>
           <div class="nav-category-links">
+            @systemPermission('suppliers', 'view')
             <a href="{{ route('accounting.suppliers') }}" class="{{ request()->is('operation-resources/suppliers') ? 'active' : '' }}"><span class="ic">📦</span>{{ __('الموردون') }}</a>
+            @endsystemPermission
+            @systemPermission('companies', 'view')
             <a href="{{ route('accounting.companies') }}" class="{{ request()->is('operation-resources/companies') ? 'active' : '' }}"><span class="ic">🏢</span>{{ __('الشركات') }}</a>
+            @endsystemPermission
+            @systemPermission('company_prices', 'view')
             <a href="{{ route('accounting.company-prices') }}" class="{{ request()->is('operation-resources/company-prices') ? 'active' : '' }}"><span class="ic">💰</span>{{ __('أسعار الشركات') }}</a>
+            @endsystemPermission
+            @systemPermission('extras', 'view')
             <a href="{{ route('accounting.extras') }}" class="{{ request()->is('operation-resources/extras') ? 'active' : '' }}"><span class="ic">✨</span>{{ __('الخدمات الإضافية') }}</a>
+            @endsystemPermission
+            @systemPermission('trips', 'view')
             <a href="{{ route('accounting.trips') }}" class="{{ request()->is('operation-resources/trips') ? 'active' : '' }}"><span class="ic">🧭</span>{{ __('الرحلات') }}</a>
+            @endsystemPermission
+            @systemPermission('hotels', 'view')
             <a href="{{ route('accounting.hotels') }}" class="{{ request()->is('operation-resources/hotels') ? 'active' : '' }}"><span class="ic">🏨</span>{{ __('الفنادق') }}</a>
+            @endsystemPermission
+            @systemPermission('boats', 'view')
             <a href="{{ route('accounting.boats') }}" class="{{ request()->is('operation-resources/boats') ? 'active' : '' }}"><span class="ic">⛵</span>{{ __('المراكب') }}</a>
+            @endsystemPermission
+            @systemPermission('vehicles', 'view')
             <a href="{{ route('accounting.vehicles') }}" class="{{ request()->is('operation-resources/vehicles') ? 'active' : '' }}"><span class="ic">🚐</span>{{ __('السيارات والأتوبيسات') }}</a>
+            @endsystemPermission
+            @systemPermission('drivers', 'view')
             <a href="{{ route('accounting.drivers') }}" class="{{ request()->is('operation-resources/drivers*') ? 'active' : '' }}"><span class="ic">🚐</span>{{ __('سائقو السيارات والأتوبيسات') }}</a>
+            @endsystemPermission
+            @systemPermission('boat_drivers', 'view')
             <a href="{{ route('accounting.boat-drivers') }}" class="{{ request()->is('operation-resources/boat-drivers*') ? 'active' : '' }}"><span class="ic">⛵</span>{{ __('سائقو المراكب') }}</a>
+            @endsystemPermission
+            @systemPermission('regions', 'view')
             <a href="{{ route('accounting.regions') }}" class="{{ request()->is('regions/manage') ? 'active' : '' }}"><span class="ic">🗺️</span>{{ __('المناطق') }}</a>
+            @endsystemPermission
+            @systemPermission('trip_hotels', 'view')
             <a href="{{ route('accounting.trip-hotels') }}" class="{{ request()->is('trips/hotels') ? 'active' : '' }}"><span class="ic">🏨</span>{{ __('ربط الرحلات بالفنادق') }}</a>
+            @endsystemPermission
           </div>
         </details>
         <details class="nav-category">
           <summary class="nav-category-title">{{ __('إدارة النظام') }}</summary>
           <div class="nav-category-links">
+            @systemPermission('users', 'view')
             <a href="/users" class="{{ request()->getPathInfo() === '/users' ? 'active' : '' }}"><span class="ic">👥</span>{{ __('المستخدمون') }}</a>
             <a href="{{ route('admin.user-permissions') }}" class="{{ request()->routeIs('admin.user-permissions*') ? 'active' : '' }}"><span class="ic">🔐</span>{{ __('صلاحيات المستخدمين') }}</a>
+            @endsystemPermission
+            @systemPermission('audit', 'view')
             <a href="/audit" class="{{ request()->getPathInfo() === '/audit' ? 'active' : '' }}"><span class="ic">🛡️</span>{{ __('سجل العمليات') }}</a>
+            @endsystemPermission
           </div>
         </details>
       @endif
@@ -97,8 +139,12 @@
       <details class="nav-category">
         <summary class="nav-category-title">{{ __('المساعدة والإعدادات') }}</summary>
         <div class="nav-category-links">
+          @systemPermission('reports', 'view')
           <a href="/help" class="{{ request()->getPathInfo() === '/help' ? 'active' : '' }}"><span class="ic">📘</span>{{ __('دليل الاستخدام') }}</a>
+          @endsystemPermission
+          @systemPermission('settings', 'view')
           <a href="/settings" class="{{ request()->getPathInfo() === '/settings' ? 'active' : '' }}"><span class="ic">⚙️</span>{{ __('الإعدادات') }}</a>
+          @endsystemPermission
         </div>
       </details>
       <form method="post" action="{{ route('accounting.logout') }}">@csrf<button class="nav-logout" type="submit"><span class="ic">🚪</span>{{ __('تسجيل الخروج') }}</button></form>

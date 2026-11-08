@@ -6,7 +6,9 @@
 <div class="panel">
   <div class="panel-head">
     <h3>👥 إدارة المستخدمين — {{ $users->count() }} مستخدم</h3>
+    @systemPermission('users', 'create')
     <button class="btn btn-teal btn-sm" onclick="openModal('addModal')">➕ مستخدم جديد</button>
+    @endsystemPermission
   </div>
   <div class="tbl-wrap">
     <table class="tbl">
@@ -27,9 +29,11 @@
           <td>
             @if($u->role === 'staff')
               {{ $u->regions->pluck('name')->join('، ') ?: 'غير محددة' }}
+              @systemPermission('users', 'update')
               <button class="btn btn-sm btn-dark" data-user-action="regions"
                 data-id="{{ $u->id }}" data-username="{{ $u->username }}"
                 data-region-ids="{{ $u->regions->pluck('id')->implode(',') }}">تحديد</button>
+              @endsystemPermission
             @else
               —
             @endif
@@ -38,6 +42,7 @@
               @else<span class="badge draft">بدون سؤال</span>@endif</td>
           <td class="num">{{ $u->created_at?->format('Y-m-d H:i') }}</td>
           <td class="num">
+            @systemPermission('users', 'update')
             <button class="btn btn-sm btn-dark" data-user-action="edit"
               data-id="{{ $u->id }}" data-name="{{ $u->name }}" data-username="{{ $u->username }}"
               data-email="{{ $u->email }}" data-role="{{ $u->role }}">✏️ تعديل</button>
@@ -46,9 +51,12 @@
               data-question="{{ $u->security_question }}">🛡️ سؤال أمان</button>
             <button class="btn btn-sm btn-teal" data-user-action="password"
               data-id="{{ $u->id }}" data-username="{{ $u->username }}">🔑 كلمة مرور</button>
+            @endsystemPermission
             @if($u->id !== $user->id)
+            @systemPermission('users', 'delete')
             <button class="btn btn-sm btn-red" data-user-action="delete"
               data-id="{{ $u->id }}" data-username="{{ $u->username }}">🗑️</button>
+            @endsystemPermission
             @endif
           </td>
         </tr>
@@ -65,6 +73,7 @@
 </div>
 
 <!-- مودال إضافة مستخدم -->
+@systemPermission('users', 'create')
 <div class="modal-overlay" id="addModal">
   <div class="modal">
     <div class="modal-head"><h3>مستخدم جديد</h3><button class="modal-close" data-close-modal>×</button></div>
@@ -92,7 +101,9 @@
     </div>
   </div>
 </div>
+@endsystemPermission
 
+@systemPermission('users', 'update')
 <div class="modal-overlay" id="user-regions-modal">
   <div class="modal">
     <div class="modal-head"><h3 id="user-regions-title">مناطق الموظف</h3><button class="modal-close" data-close-modal>×</button></div>
@@ -174,6 +185,7 @@
     </div>
   </div>
 </div>
+@endsystemPermission
 
 @endsection
 

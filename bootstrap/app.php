@@ -22,6 +22,7 @@ $middleware->alias([
 'superadmin'=>\App\Http\Middleware\SuperAdminMiddleware::class,
 'accounting-role'=>\App\Http\Middleware\AccountingRoleMiddleware::class,
 'supervisor'=>\App\Http\Middleware\SupervisorMiddleware::class,
+'system-permission'=>\App\Http\Middleware\SystemPermissionMiddleware::class,
 'StaffSales'=>\App\Http\Middleware\StaffSallesMiddleware::class,
 'StaffOperations'=>\App\Http\Middleware\StaffOperationsMiddleware::class,
 'StaffReseller'=>\App\Http\Middleware\StaffResellerMiddleware::class,

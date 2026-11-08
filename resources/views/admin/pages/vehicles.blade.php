@@ -16,7 +16,9 @@
     @else
       <a class="btn btn-dark" href="{{ route('accounting.vehicles', ['include_archived' => 1]) }}">عرض المؤرشف</a>
     @endif
+    @systemPermission('vehicles', 'create')
     <button class="btn btn-gold" type="button" onclick="openVehicleModal('create-vehicle-modal')">＋ إضافة سيارة / توبيس</button>
+    @endsystemPermission
   </div>
   <div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>السيارة / التوبيس</th><th>المنطقة</th><th>الكود</th><th>النوع</th><th>التشغيل</th><th>المورد</th><th>حساب الإيراد</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
@@ -30,6 +32,7 @@
           <td>{{ $vehicle->status === 'active' ? 'نشطة' : 'غير نشطة' }}</td>
           <td>
             <div class="j-actions">
+              @systemPermission('vehicles', 'update')
               <button class="btn btn-dark btn-sm" type="button" data-edit-vehicle
                 data-id="{{ $vehicle->id }}" data-url="{{ route('accounting.vehicles.update', $vehicle) }}"
                 data-name="{{ $vehicle->name }}" data-code="{{ $vehicle->code }}"
@@ -37,10 +40,13 @@
                 data-status="{{ $vehicle->status }}" data-color="{{ $vehicle->color }}" data-region="{{ $vehicle->region_id }}"
                 data-codes="{{ $vehicle->codes }}" data-codee="{{ $vehicle->codee }}"
                 data-supplier="{{ $vehicle->supplier_id }}" data-supplier-price="{{ $vehicle->supplier_price }}">تعديل</button>
+              @endsystemPermission
+              @systemPermission('vehicles', 'delete')
               <form method="POST" action="{{ route('accounting.vehicles.destroy', $vehicle) }}" onsubmit="return confirm('سيتم أرشفة السيارة وإخفاؤها من الموارد النشطة مع الاحتفاظ بسجلاتها المحاسبية والتشغيلية. هل تريد المتابعة؟')">
                 @csrf @method('DELETE')
                 <button class="btn btn-red btn-sm" type="submit">حذف</button>
               </form>
+              @endsystemPermission
             </div>
           </td>
         </tr>
