@@ -354,7 +354,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('admin.login.handle') }}" method="POST">
+            <form action="{{ route('admin.login.handle') }}" method="POST" autocomplete="on">
 
                 @csrf
 
@@ -457,6 +457,7 @@
     const buttonLoader = document.getElementById('buttonLoader');
 
     loginForm.addEventListener('submit', function () {
+        password.type = 'password';
         loginButton.disabled = true;
         buttonText.style.display = 'none';
         buttonLoader.style.display = 'flex';

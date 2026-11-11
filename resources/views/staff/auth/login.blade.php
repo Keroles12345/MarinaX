@@ -433,7 +433,7 @@
             @endif
 
 
-            <form action="{{ route('staff.login.handle') }}" method="POST">
+            <form action="{{ route('staff.login.handle') }}" method="POST" autocomplete="on">
 
                 @csrf
 
@@ -513,7 +513,8 @@
 
 <div class="form-group">
     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-        <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+        <input type="hidden" name="remember" value="0">
+        <input type="checkbox" name="remember" value="1" {{ old('remember', true) ? 'checked' : '' }}>
         Remember me
     </label>
 </div>
@@ -573,6 +574,7 @@
     const buttonLoader = document.getElementById('buttonLoader');
 
     loginForm.addEventListener('submit', function () {
+        password.type = 'password';
 
         // Prevent multiple clicks
         loginButton.disabled = true;

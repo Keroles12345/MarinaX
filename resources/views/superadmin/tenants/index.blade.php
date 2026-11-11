@@ -239,13 +239,13 @@
     @if($page === 'create-user')
     <section class="tenant-card">
         <h2>إضافة مستخدم لشركة</h2>
-        <form method="post" action="{{ route('superadmin.users.store') }}">
+        <form method="post" action="{{ route('superadmin.users.store') }}" autocomplete="on">
             @csrf
             <div class="tenant-grid">
                 <label>الشركة<select name="tenant_id" required>@foreach($tenants->where('status', true) as $tenant)<option value="{{ $tenant->id }}" @selected(old('tenant_id') == $tenant->id)>{{ $tenant->name }}</option>@endforeach</select></label>
                 <label>الاسم<input name="name" required maxlength="255" value="{{ old('name') }}"></label>
                 <label>اسم المستخدم<input name="username" required maxlength="255" value="{{ old('username') }}"></label>
-                <label>البريد الإلكتروني<input name="email" type="email" required value="{{ old('email') }}"></label>
+                <label>البريد الإلكتروني<input name="email" type="email" required autocomplete="username" value="{{ old('email') }}"></label>
                 <label>الدور<select name="role" required><option value="admin">مدير الشركة</option><option value="staff">موظف</option><option value="accountant">محاسب</option><option value="viewer">مشاهد</option><option value="account_user">مستخدم حسابات</option><option value="supervisor">مشرف</option><option value="customer">عميل</option></select></label>
                 <label>كلمة المرور<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
             </div>
@@ -324,7 +324,7 @@
                                     @method('put')
                                     <input name="name" aria-label="اسم المستخدم" required value="{{ $user->name }}">
                                     <input name="username" aria-label="اسم الدخول" required value="{{ $user->username }}">
-                                    <input name="email" aria-label="البريد الإلكتروني" type="email" required value="{{ $user->email }}">
+                                    <input name="email" aria-label="البريد الإلكتروني" type="email" required autocomplete="username" value="{{ $user->email }}">
                                     <select name="tenant_id" aria-label="الشركة" required>
                                         @foreach($tenants->where('status', true) as $tenant)
                                             <option value="{{ $tenant->id }}" @selected($user->tenant_id === $tenant->id)>{{ $tenant->name }}</option>

@@ -17,7 +17,7 @@ class StaffMiddleware
             return redirect()->route('staff.login');
         }
 
-        if ($user->role !== 'staff') {
+        if (! in_array($user->role, ['staff', 'admin'], true)) {
             abort(403);
         }
 

@@ -73,9 +73,11 @@
   <div class="panel">
     <div class="panel-head"><h3>🔑 تغيير كلمة المرور الخاصة بي</h3></div>
     <div class="panel-body">
-      <div class="field"><label>كلمة المرور الحالية</label><input id="p-old" type="password"></div>
-      <div class="field"><label>كلمة المرور الجديدة (8 أحرف على الأقل، حروف وأرقام)</label><input id="p-new" type="password" autocomplete="new-password"></div>
-      <button class="btn btn-teal" onclick="changePw()">تغيير كلمة المرور</button>
+      <form id="change-password-form" autocomplete="on" onsubmit="event.preventDefault(); changePw();">
+        <div class="field"><label for="p-old">كلمة المرور الحالية</label><input id="p-old" name="old" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="p-new">كلمة المرور الجديدة (8 أحرف على الأقل، حروف وأرقام)</label><input id="p-new" name="new" type="password" autocomplete="new-password"></div>
+        <button type="submit" class="btn btn-teal">تغيير كلمة المرور</button>
+      </form>
     </div>
   </div>
 

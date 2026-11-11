@@ -60,7 +60,7 @@ public function loginn(Request $request)
             ->withErrors(['error' => 'الشركة المرتبط بها المستخدم غير مفعلة']);
     }
 
-    if ($user->role !== 'staff') {
+    if (! in_array($user->role, ['staff', 'admin'], true)) {
         $guard->logout();
         $request->session()->regenerate();
 

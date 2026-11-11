@@ -80,7 +80,7 @@
     <div class="modal-body">
       <div class="field"><label>الاسم الكامل *</label><input id="u-name" type="text"></div>
       <div class="field"><label>اسم الدخول *</label><input id="u-user" type="text" placeholder="بالإنجليزية"></div>
-      <div class="field"><label>البريد الإلكتروني *</label><input id="u-email" type="email" autocomplete="email"></div>
+      <div class="field"><label>البريد الإلكتروني *</label><input id="u-email" type="email" autocomplete="username"></div>
       <div class="field"><label>كلمة المرور *</label><input id="u-pass" type="password" autocomplete="new-password"></div>
       <div class="field"><label>سؤال الأمان (اختياري — لتفعيل «نسيت كلمة المرور؟»)</label><input id="u-q" type="text" placeholder="مثال: اسم مدرستك الثانوية؟"></div>
       <div class="field"><label>إجابة سؤال الأمان (اختياري)</label><input id="u-ans" type="text"></div>

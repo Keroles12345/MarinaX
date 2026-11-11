@@ -18,7 +18,7 @@
       @if($step === 'done')
         <div style="text-align:center"><a class="btn btn-gold" href="/login">تسجيل الدخول</a></div>
       @elseif($step === 'answer')
-        <form method="post">
+        <form method="post" autocomplete="on">
           @csrf
           <input type="hidden" name="act" value="setup">
           <input type="hidden" name="username" value="{{ $username }}">
@@ -28,7 +28,7 @@
           <button class="btn btn-gold btn-block" type="submit">تغيير كلمة المرور</button>
         </form>
       @else
-        <form method="post">
+        <form method="post" autocomplete="on">
           @csrf
           <div class="field"><label>اسم المستخدم</label><input type="text" name="username" required autofocus autocomplete="username" value="{{ $username }}"></div>
           <button class="btn btn-gold btn-block" type="submit">متابعة</button>

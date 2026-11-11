@@ -14,15 +14,15 @@
       <h1>النظام المحاسبي المتكامل</h1>
       <p class="sub">قيود اليومية • الأستاذ العام • ميزان المراجعة</p>
       @if($errors->any())<div class="alert err">{{ $errors->first() }}</div>@endif
-      <form method="post" action="{{ route('login') }}">
+      <form method="post" action="{{ route('login') }}" autocomplete="on">
         @csrf
         <div class="field">
-          <label>اسم المستخدم</label>
-          <input type="text" name="username" required autofocus autocomplete="username" placeholder="admin" value="{{ old('username') }}">
+          <label for="username">اسم المستخدم</label>
+          <input id="username" type="text" name="username" required autofocus autocomplete="username" placeholder="admin" value="{{ old('username') }}">
         </div>
         <div class="field">
-          <label>كلمة المرور</label>
-          <input type="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+          <label for="password">كلمة المرور</label>
+          <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••">
         </div>
         <button type="submit" class="btn btn-gold btn-block">دخــول</button>
       </form>

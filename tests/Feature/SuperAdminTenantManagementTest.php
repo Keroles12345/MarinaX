@@ -31,6 +31,7 @@ class SuperAdminTenantManagementTest extends TestCase
             $table->string('email')->unique();
             $table->string('password');
             $table->string('password_hash')->nullable();
+            $table->rememberToken();
             $table->string('role');
             $table->boolean('status')->default(true);
             $table->foreignId('tenant_id')->nullable();
@@ -571,5 +572,51 @@ class SuperAdminTenantManagementTest extends TestCase
         $this->assertAuthenticatedAs($companyAdmin, 'admin');
         $this->assertAuthenticatedAs($staff, 'staff');
         $this->assertAuthenticatedAs($superAdmin, 'superadmin');
+    }
+
+    public function test_admin_can_log_in_to_staff_dashboard_from_staff_login_page(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'Company A', 'status' => true]);
+        $admin = User::withoutGlobalScopes()->create([
+            'name' => 'Company Admin',
+            'username' => 'company-admin',
+            'email' => 'admin@example.test',
+            'password' => Hash::make('CompanyPass123'),
+            'role' => 'admin',
+            'status' => true,
+            'tenant_id' => $tenant->id,
+            'is_super_admin' => false,
+        ]);
+
+        $this->post(route('staff.login.handle'), [
+            'email' => $admin->email,
+            'password' => 'CompanyPass123',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($admin, 'staff');
+        $this->assertGuest('admin');
+    }
+
+    public function test_staff_login_remembers_user_by_default(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'Company A', 'status' => true]);
+        $staff = User::withoutGlobalScopes()->create([
+            'name' => 'Company Staff',
+            'username' => 'company-staff',
+            'email' => 'staff@example.test',
+            'password' => Hash::make('StaffPass123'),
+            'role' => 'staff',
+            'status' => true,
+            'tenant_id' => $tenant->id,
+            'is_super_admin' => false,
+        ]);
+
+        $this->post(route('staff.login.handle'), [
+            'email' => $staff->email,
+            'password' => 'StaffPass123',
+            'remember' => '1',
+        ])->assertRedirect(route('dashboard'));
+
+        self::assertNotEmpty($staff->fresh()->getRememberToken());
     }
 }
