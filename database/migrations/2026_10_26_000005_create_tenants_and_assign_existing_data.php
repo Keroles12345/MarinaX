@@ -103,21 +103,50 @@ return new class extends Migration
             });
         }
 
-        Schema::table('settings', function (Blueprint $table) {
-            $table->dropPrimary();
-            $table->bigIncrements('id');
-            $table->unique(['tenant_id', 'key']);
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::create('settings_tenantized', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignId('tenant_id')->nullable()->constrained('tenants')->nullOnDelete();
+                $table->string('key');
+                $table->longText('value')->nullable();
+                $table->unique(['tenant_id', 'key']);
+            });
+            DB::table('settings_tenantized')->insertUsing(
+                ['tenant_id', 'key', 'value'],
+                DB::table('settings')->select(['tenant_id', 'key', 'value']),
+            );
+            Schema::drop('settings');
+            Schema::rename('settings_tenantized', 'settings');
+        } else {
+            Schema::table('settings', function (Blueprint $table): void {
+                $table->dropPrimary();
+                $table->bigIncrements('id');
+                $table->unique(['tenant_id', 'key']);
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('settings', function (Blueprint $table) {
-            $table->dropUnique(['tenant_id', 'key']);
-            $table->dropPrimary();
-            $table->dropColumn('id');
-            $table->primary('key');
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::create('settings_legacy', function (Blueprint $table): void {
+                $table->string('key')->primary();
+                $table->longText('value')->nullable();
+            });
+            DB::table('settings_legacy')->insertUsing(
+                ['key', 'value'],
+                DB::table('settings')->select(['key', 'value']),
+            );
+            Schema::drop('settings');
+            Schema::rename('settings_legacy', 'settings');
+        } else {
+            Schema::table('settings', function (Blueprint $table): void {
+                $table->dropUnique(['tenant_id', 'key']);
+                $table->dropPrimary();
+                $table->dropColumn('id');
+                $table->primary('key');
+            });
+        }
 
         foreach ([
             'accounts' => 'acc_no',

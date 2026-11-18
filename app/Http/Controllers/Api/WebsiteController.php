@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\PaymentProviderNotConfigured;
 use App\Http\Controllers\Controller;
 use App\Models\Companies;
 use App\Models\Currencies;
@@ -10,12 +11,17 @@ use App\Models\operations;
 use App\Models\Trips;
 use App\Models\Trips_hotels;
 use App\Models\User;
+use App\Services\BookingLifecycleService;
+use App\Services\BookingNotificationDispatcher;
+use App\Services\PaymentService;
 use App\Support\TenantContext;
 use App\Support\TenantDatabase;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -78,8 +84,31 @@ class WebsiteController extends Controller
         return response()->json(['data' => $currencies]);
     }
 
-    public function storeBooking(Request $request): JsonResponse
-    {
+    public function storeBooking(
+        Request $request,
+        BookingNotificationDispatcher $notifications,
+    ): JsonResponse {
+        Validator::make(
+            ['idempotency_key' => $request->header('Idempotency-Key')],
+            ['idempotency_key' => ['nullable', 'string', 'min:8', 'max:255']],
+        )->validate();
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $tenantId = (int) TenantContext::id();
+        $keyHash = is_string($idempotencyKey)
+            ? hash_hmac('sha256', $idempotencyKey, (string) config('app.key'))
+            : null;
+        $requestHash = hash('sha256', json_encode($this->canonicalize($request->all()), JSON_THROW_ON_ERROR));
+
+        if ($keyHash) {
+            $existing = DB::table('tenant_api_idempotency_keys')
+                ->where('tenant_id', $tenantId)
+                ->where('key_hash', $keyHash)
+                ->first();
+            if ($existing) {
+                return $this->idempotencyReplay($existing, $requestHash);
+            }
+        }
+
         $data = $request->validate([
             'trip_id' => [
                 'required',
@@ -152,51 +181,235 @@ class WebsiteController extends Controller
             + ((int) $data['infants'] * (float) $prices->price_infant),
             2,
         );
+        try {
+            $result = DB::transaction(function () use ($data, $trip, $company, $currency, $hotel, $prices, $creator, $amount, $tenantId, $keyHash, $requestHash): array {
+                if ($keyHash) {
+                    DB::table('tenant_api_idempotency_keys')->insert([
+                        'tenant_id' => $tenantId,
+                        'key_hash' => $keyHash,
+                        'request_hash' => $requestHash,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
 
-        $operation = DB::transaction(function () use ($data, $trip, $company, $currency, $hotel, $prices, $creator, $amount): operations {
-            $customerData = $data['customer'];
-            $customer = customers::query()->create([
-                'name' => $customerData['name'],
-                'email' => $customerData['email'] ?? null,
-                'phone' => $customerData['phone'],
-                'address' => $customerData['address'] ?? null,
-            ]);
+                $customerData = $data['customer'];
+                $customer = customers::query()->create([
+                    'name' => $customerData['name'],
+                    'email' => $customerData['email'] ?? null,
+                    'phone' => $customerData['phone'],
+                    'address' => $customerData['address'] ?? null,
+                ]);
 
-            return operations::query()->create([
-                'booking_id' => 'WEB-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
-                'id_trip' => $trip->id,
-                'id_company' => $company->id,
-                'customer_id' => $customer->id,
-                'trip_hotel_id' => $hotel?->id,
-                'id_currency' => $currency->id,
-                'trip_date' => $data['trip_date'],
-                'trip_time' => $trip->time_trip,
-                'time_pickup' => $hotel?->pickup_time,
-                'adults' => $data['adults'],
-                'children' => $data['children'],
-                'infants' => $data['infants'],
-                'price_adult' => $prices->price_adult,
-                'price_child' => $prices->price_child,
-                'price_infant' => $prices->price_infant,
-                'subtotal' => $amount,
-                'amount_total' => $amount,
-                'totalamount' => $amount,
-                'amount_remaining' => $amount,
-                'status_payment' => 'pending',
-                'status' => 'pending',
-                'remarks' => $data['remarks'] ?? null,
-                'by_created' => $creator->id,
-            ]);
-        });
+                $operation = operations::query()->create([
+                    'booking_id' => 'WEB-'.now()->format('ymd').'-'.Str::upper(Str::random(8)),
+                    'id_trip' => $trip->id,
+                    'id_company' => $company->id,
+                    'customer_id' => $customer->id,
+                    'trip_hotel_id' => $hotel?->id,
+                    'id_currency' => $currency->id,
+                    'trip_date' => $data['trip_date'],
+                    'trip_time' => $trip->time_trip,
+                    'time_pickup' => $hotel?->pickup_time,
+                    'adults' => $data['adults'],
+                    'children' => $data['children'],
+                    'infants' => $data['infants'],
+                    'price_adult' => $prices->price_adult,
+                    'price_child' => $prices->price_child,
+                    'price_infant' => $prices->price_infant,
+                    'subtotal' => $amount,
+                    'amount_total' => $amount,
+                    'totalamount' => $amount,
+                    'amount_remaining' => $amount,
+                    'status_payment' => 'pending',
+                    'status' => 'pending',
+                    'booking_status' => 'pending',
+                    'remarks' => $data['remarks'] ?? null,
+                    'by_created' => $creator->id,
+                ]);
+                DB::table('operation_status_history')->insert([
+                    'tenant_id' => $tenantId,
+                    'operation_id' => $operation->id,
+                    'from_status' => null,
+                    'to_status' => 'pending',
+                    'changed_by' => null,
+                    'reason' => 'Booking created through the tenant website API.',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $responseBody = [
+                    'data' => [
+                        'booking_id' => $operation->booking_id,
+                        'status' => $operation->booking_status,
+                        'amount' => $operation->amount_total,
+                        'currency' => $currency->code,
+                    ],
+                ];
+
+                if ($keyHash) {
+                    DB::table('tenant_api_idempotency_keys')
+                        ->where('tenant_id', $tenantId)
+                        ->where('key_hash', $keyHash)
+                        ->update([
+                            'response_body' => json_encode($responseBody, JSON_THROW_ON_ERROR),
+                            'response_status' => 201,
+                            'operation_id' => $operation->id,
+                            'completed_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                return ['operation' => $operation, 'body' => $responseBody, 'status' => 201];
+            });
+        } catch (QueryException $exception) {
+            if (! $keyHash || ! in_array((string) $exception->getCode(), ['23000', '23505'], true)) {
+                throw $exception;
+            }
+
+            $existing = DB::table('tenant_api_idempotency_keys')
+                ->where('tenant_id', $tenantId)
+                ->where('key_hash', $keyHash)
+                ->first();
+            if (! $existing) {
+                throw $exception;
+            }
+
+            return $this->idempotencyReplay($existing, $requestHash);
+        }
+
+        $notifications->dispatch($result['operation'], 'created', 'A new booking is pending confirmation.');
+
+        return response()->json($result['body'], $result['status']);
+    }
+
+    public function booking(string $booking): JsonResponse
+    {
+        $operation = operations::query()->where('booking_id', $booking)->firstOrFail();
 
         return response()->json([
             'data' => [
                 'booking_id' => $operation->booking_id,
-                'status' => $operation->status,
+                'status' => $operation->booking_status,
+                'trip_id' => $operation->id_trip,
+                'company_id' => $operation->id_company,
+                'trip_date' => $operation->trip_date?->toDateString(),
+                'adults' => $operation->adults,
+                'children' => $operation->children,
+                'infants' => $operation->infants,
                 'amount' => $operation->amount_total,
-                'currency' => $currency->code,
+                'amount_paid' => $operation->amount_paid,
+                'amount_remaining' => $operation->amount_remaining,
+                'payment_status' => $operation->status_payment,
+                'created_at' => $operation->created_at,
             ],
-        ], 201);
+        ]);
+    }
+
+    public function updateBookingStatus(
+        Request $request,
+        string $booking,
+        BookingLifecycleService $lifecycle,
+        BookingNotificationDispatcher $notifications,
+    ): JsonResponse {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['confirmed', 'paid', 'cancelled', 'refunded'])],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+        $operation = operations::query()->where('booking_id', $booking)->firstOrFail();
+        $operation = $lifecycle->transition(
+            (int) $operation->id,
+            (int) TenantContext::id(),
+            $data['status'],
+            null,
+            $data['reason'] ?? null,
+            'api_key',
+        );
+        $notifications->dispatch($operation, $data['status'], 'Booking status changed to '.$data['status'].'.');
+
+        return response()->json(['data' => [
+            'booking_id' => $operation->booking_id,
+            'status' => $operation->booking_status,
+        ]]);
+    }
+
+    public function createPayment(Request $request, string $booking, PaymentService $payments): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+        ]);
+        Validator::make(
+            ['idempotency_key' => $request->header('Idempotency-Key')],
+            ['idempotency_key' => ['required', 'string', 'min:8', 'max:255']],
+        )->validate();
+
+        try {
+            $result = $payments->createIntent($booking, (float) $data['amount'], $request->header('Idempotency-Key'));
+        } catch (PaymentProviderNotConfigured) {
+            return response()->json(['message' => 'لا يوجد مزود دفع مهيأ لهذا النظام.'], 503);
+        }
+
+        return response()->json([
+            'data' => [
+                'payment_id' => $result['payment']->id,
+                'status' => $result['payment']->status,
+                'redirect_url' => $result['redirect_url'],
+            ],
+        ], 202);
+    }
+
+    public function refundPayment(Request $request, string $payment, PaymentService $payments): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+        ]);
+        Validator::make(
+            ['idempotency_key' => $request->header('Idempotency-Key')],
+            ['idempotency_key' => ['required', 'string', 'min:8', 'max:255']],
+        )->validate();
+
+        try {
+            $payments->refund((int) $payment, (float) $data['amount'], $request->header('Idempotency-Key'));
+        } catch (PaymentProviderNotConfigured) {
+            return response()->json(['message' => 'لا يوجد مزود دفع مهيأ لهذا النظام.'], 503);
+        }
+
+        return response()->json(['data' => ['payment_id' => (int) $payment, 'status' => 'refund_pending']], 202);
+    }
+
+    private function idempotencyReplay(object $existing, string $requestHash): JsonResponse
+    {
+        if (! hash_equals($existing->request_hash, $requestHash)) {
+            return response()->json([
+                'message' => 'تم استخدام Idempotency-Key سابقاً مع محتوى مختلف.',
+            ], 409);
+        }
+
+        if (! $existing->response_body || ! $existing->response_status) {
+            return response()->json(['message' => 'الطلب بهذا المفتاح قيد المعالجة. أعد المحاولة لاحقاً.'], 409);
+        }
+
+        return response()->json(
+            json_decode($existing->response_body, true, flags: JSON_THROW_ON_ERROR),
+            (int) $existing->response_status,
+            ['Idempotent-Replay' => 'true'],
+        );
+    }
+
+    private function canonicalize(array $data): array
+    {
+        foreach ($data as &$value) {
+            if (is_array($value)) {
+                $value = $this->canonicalize($value);
+            }
+        }
+        unset($value);
+
+        if (! array_is_list($data)) {
+            ksort($data);
+        }
+
+        return $data;
     }
 
     private function tripData(Trips $trip): array

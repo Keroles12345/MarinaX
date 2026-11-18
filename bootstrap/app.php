@@ -25,6 +25,7 @@ $middleware->alias([
 'supervisor'=>\App\Http\Middleware\SupervisorMiddleware::class,
 'system-permission'=>\App\Http\Middleware\SystemPermissionMiddleware::class,
 'tenant.api-key'=>\App\Http\Middleware\AuthenticateTenantApiKey::class,
+'tenant.api-scope'=>\App\Http\Middleware\RequireTenantApiScope::class,
 'StaffSales'=>\App\Http\Middleware\StaffSallesMiddleware::class,
 'StaffOperations'=>\App\Http\Middleware\StaffOperationsMiddleware::class,
 'StaffReseller'=>\App\Http\Middleware\StaffResellerMiddleware::class,

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\Support\TenantApiScopes;
 use App\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -67,6 +68,7 @@ class AuthenticateTenantApiKey
 
         DB::table('tenants')->where('id', $tenant->id)->update(['api_key_last_used_at' => now()]);
         TenantContext::initialize((int) $tenant->id);
+        $request->attributes->set('tenant_api_scopes', $tenant->api_key_scopes ?? TenantApiScopes::DEFAULT);
         $startedAt = hrtime(true);
 
         try {

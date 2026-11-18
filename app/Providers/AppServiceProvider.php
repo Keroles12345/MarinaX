@@ -2,14 +2,16 @@
 
 namespace App\Providers;
 
+use App\Contracts\PaymentGateway;
 use App\Services\CurrencyService;
+use App\Services\UnconfiguredPaymentGateway;
 use App\Support\DashboardTemplateTranslator;
+use App\Support\SystemPermissions;
 use App\Support\TenantContext;
 use App\Support\TenantDatabase;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Validator;
-use App\Support\SystemPermissions;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,9 +20,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-     $this->app->singleton(CurrencyService::class,function(){
-return new CurrencyService();
-     });
+        $this->app->bind(PaymentGateway::class, UnconfiguredPaymentGateway::class);
+        $this->app->singleton(CurrencyService::class, function () {
+            return new CurrencyService;
+        });
     }
 
     /**

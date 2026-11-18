@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'marinax_payments' => [
+        'provider' => env('PAYMENT_PROVIDER'),
+        'webhook_secrets' => [
+            'generic' => env('PAYMENT_WEBHOOK_SECRET'),
+        ],
+    ],
+
 ];

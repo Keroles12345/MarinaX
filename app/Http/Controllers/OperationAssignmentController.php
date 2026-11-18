@@ -6,13 +6,16 @@ use App\Models\Boat;
 use App\Models\Boat_Driver;
 use App\Models\Drive;
 use App\Models\OperationAssignment;
-use App\Models\Vehicle;
 use App\Models\operations;
-use App\Services\OperationRevenueAccountService;
+use App\Models\Vehicle;
+use App\Services\BookingLifecycleService;
+use App\Services\BookingNotificationDispatcher;
 use App\Services\EmployeeCustodyService;
+use App\Services\OperationRevenueAccountService;
 use App\Services\StaffRegionAccess;
-use Illuminate\Support\Facades\Auth;
+use App\Support\TenantDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -39,7 +42,7 @@ class OperationAssignmentController extends Controller
             )
             ->when($request->filled('date'), fn ($q) => $q->whereDate('operation_assignments.assign_date', $request->input('date')))
             ->when($request->filled('type'), fn ($q) => $q->where('operation_assignments.type', $request->input('type')))
-            ->when($request->filled('search'), fn ($q) => $q->where('operations.booking_id', 'like', '%' . $request->input('search') . '%'))
+            ->when($request->filled('search'), fn ($q) => $q->where('operations.booking_id', 'like', '%'.$request->input('search').'%'))
             ->orderByDesc('operation_assignments.assign_date')->orderByDesc('operation_assignments.id');
 
         $perPage = 10;
@@ -48,9 +51,9 @@ class OperationAssignmentController extends Controller
         $boatIds = $assignments->getCollection()->where('type', 'boat')->pluck('resource_id')->unique();
         $vehicleIds = $assignments->getCollection()->where('type', 'vehicle')->pluck('resource_id')->unique();
         $resourceNames = [];
-        Boat::whereIn('id', $boatIds)->get(['id', 'name'])->each(fn ($item) => $resourceNames['boat:' . $item->id] = $item->name);
-        Vehicle::whereIn('id', $vehicleIds)->get(['id', 'name'])->each(fn ($item) => $resourceNames['vehicle:' . $item->id] = $item->name);
-        $externalOperationIds = \App\Support\TenantDatabase::table('operation_assignments as oa')
+        Boat::whereIn('id', $boatIds)->get(['id', 'name'])->each(fn ($item) => $resourceNames['boat:'.$item->id] = $item->name);
+        Vehicle::whereIn('id', $vehicleIds)->get(['id', 'name'])->each(fn ($item) => $resourceNames['vehicle:'.$item->id] = $item->name);
+        $externalOperationIds = TenantDatabase::table('operation_assignments as oa')
             ->leftJoin('boats as b', function ($join) {
                 $join->on('b.id', '=', 'oa.resource_id')->where('oa.type', 'boat');
             })
@@ -98,7 +101,7 @@ class OperationAssignmentController extends Controller
             ]);
         }
 
-        $regions = \App\Support\TenantDatabase::table('regions')
+        $regions = TenantDatabase::table('regions')
             ->whereIn('id', StaffRegionAccess::regionIds(Auth::guard('staff')->user()))
             ->where('is_active', true)
             ->orderBy('name')
@@ -111,8 +114,7 @@ class OperationAssignmentController extends Controller
         Request $request,
         OperationRevenueAccountService $revenueAccounts,
         EmployeeCustodyService $custodyAccounts,
-    )
-    {
+    ) {
         $data = $request->validate([
             'operation_ids' => ['required', 'array', 'min:1', 'max:100'],
             'operation_ids.*' => ['required', 'integer', 'distinct', 'tenant_exists:operations,id'],
@@ -120,7 +122,7 @@ class OperationAssignmentController extends Controller
         ]);
 
         $summary = DB::transaction(function () use ($data, $revenueAccounts, $custodyAccounts): array {
-            $region = \App\Support\TenantDatabase::table('regions')->where('name', $data['region'])->where('is_active', true)->first();
+            $region = TenantDatabase::table('regions')->where('name', $data['region'])->where('is_active', true)->first();
             if (! $region) {
                 throw ValidationException::withMessages(['region' => 'المنطقة المحددة غير مفعّلة. اختر منطقة مفعّلة.']);
             }
@@ -138,7 +140,7 @@ class OperationAssignmentController extends Controller
             $accessibleCount = StaffRegionAccess::operationQuery($staff)
                 ->whereIn('operations.id', $data['operation_ids'])
                 ->count();
-            $inRegionCount = \App\Support\TenantDatabase::table('operations')
+            $inRegionCount = TenantDatabase::table('operations')
                 ->join('trips_hotels', 'trips_hotels.id', '=', 'operations.trip_hotel_id')
                 ->join('hotels', 'hotels.id', '=', 'trips_hotels.hotel_id')
                 ->whereIn('operations.id', $data['operation_ids'])
@@ -153,7 +155,7 @@ class OperationAssignmentController extends Controller
             $cashAccountId = $custodyAccounts->cashAccountId();
             $receivablesAccountId = $this->accountId('1201', 'العملاء (المدينون)', 'أصول');
             $posted = ['internal' => 0, 'external' => 0];
-            $employees = \App\Support\TenantDatabase::table('users')
+            $employees = TenantDatabase::table('users')
                 ->whereIn('id', $operations->pluck('by_created')->filter()->unique())
                 ->get(['id', 'name', 'role'])
                 ->keyBy('id');
@@ -182,7 +184,7 @@ class OperationAssignmentController extends Controller
                     ]);
                 }
 
-                $resources = \App\Support\TenantDatabase::table('operation_assignments as oa')
+                $resources = TenantDatabase::table('operation_assignments as oa')
                     ->leftJoin('boats as b', function ($join) {
                         $join->on('b.id', '=', 'oa.resource_id')->where('oa.type', 'boat');
                     })
@@ -240,7 +242,7 @@ class OperationAssignmentController extends Controller
                 }
 
                 $movementNo = 'OPS-'.$operation->id;
-                if (\App\Support\TenantDatabase::table('journal_entries')->where('movement_no', $movementNo)->exists()) {
+                if (TenantDatabase::table('journal_entries')->where('movement_no', $movementNo)->exists()) {
                     throw ValidationException::withMessages([
                         'operation_ids' => "رقم الحركة {$movementNo} مستخدم مسبقًا؛ لم يتم ترحيل العملية.",
                     ]);
@@ -257,7 +259,7 @@ class OperationAssignmentController extends Controller
                 } else {
                     $description .= ' - '.$resourceNames;
                 }
-                $entryId = \App\Support\TenantDatabase::table('journal_entries')->insertGetId([
+                $entryId = TenantDatabase::table('journal_entries')->insertGetId([
                     'movement_no' => $movementNo,
                     'entry_date' => $operation->trip_date->toDateString(),
                     'description' => $description,
@@ -284,10 +286,10 @@ class OperationAssignmentController extends Controller
                         'credit' => $revenueLine['amount'],
                     ];
                 }
-                \App\Support\TenantDatabase::table('journal_lines')->insert($lines);
+                TenantDatabase::table('journal_lines')->insert($lines);
                 operations::whereKey($operation->id)->update(['accounting_entry_id' => $entryId]);
                 $posted[$isExternal ? 'external' : 'internal']++;
-                \App\Support\TenantDatabase::table('audit_log')->insert([
+                TenantDatabase::table('audit_log')->insert([
                     'user' => auth()->user()->name,
                     'action' => 'ترحيل إيراد عملية',
                     'details' => $operation->booking_id.' — '.$amount.' — '.($isExternal ? 'مركب خارجي' : 'تشغيل داخلي').' — '.$movementNo,
@@ -304,7 +306,7 @@ class OperationAssignmentController extends Controller
 
     public function create()
     {
-        return view('staff.operation-assignments.form', $this->formData(new OperationAssignment()));
+        return view('staff.operation-assignments.form', $this->formData(new OperationAssignment));
     }
 
     public function store(Request $request)
@@ -333,17 +335,41 @@ class OperationAssignmentController extends Controller
         return redirect()->route('operation-assignments.index')->with('status', 'Assignment updated successfully.');
     }
 
-    public function destroy(OperationAssignment $operationAssignment)
-    {
+    public function destroy(
+        OperationAssignment $operationAssignment,
+        BookingLifecycleService $lifecycle,
+        BookingNotificationDispatcher $notifications,
+    ) {
         $this->assertAssignmentAccess($operationAssignment);
         $operationId = $operationAssignment->operation_id;
         $this->assertOperationUnposted($operationId);
-        $operationAssignment->delete();
-        $operation = operations::find($operationId);
-        if ($operation) {
+        $operation = operations::findOrFail($operationId);
+        $cancelled = DB::transaction(function () use ($operationAssignment, $operation, $lifecycle): operations {
+            if ($operation->booking_status !== 'cancelled') {
+                if (! in_array($operation->booking_status, ['pending', 'confirmed'], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'A paid or refunded booking cannot be cancelled by deleting its resource assignment.',
+                    ]);
+                }
+
+                $operation = $lifecycle->transition(
+                    (int) $operation->id,
+                    (int) $operation->tenant_id,
+                    'cancelled',
+                    Auth::guard('staff')->id() ? (int) Auth::guard('staff')->id() : null,
+                    'Booking cancelled after its resource assignment was deleted.',
+                    'user',
+                    Auth::guard('staff')->id() ? (string) Auth::guard('staff')->id() : null,
+                );
+            }
+
+            $operationAssignment->delete();
             $operation->status = 'cancel';
             $operation->save();
-        }
+
+            return $operation;
+        });
+        $notifications->dispatch($cancelled, 'cancelled', 'The booking was cancelled after its resource assignment was deleted.');
 
         return redirect()->route('operation-assignments.index')->with('status', 'Assignment deleted successfully.');
     }
@@ -382,7 +408,7 @@ class OperationAssignmentController extends Controller
                     ->where('boat_id', $data['resource_id'])->exists();
             } else {
                 $driverIsAttached = Drive::whereKey($data['driver_id'])->exists()
-                    && \App\Support\TenantDatabase::table('vehicle_drivers')->where('vehicle_id', $data['resource_id'])
+                    && TenantDatabase::table('vehicle_drivers')->where('vehicle_id', $data['resource_id'])
                         ->where('driver_id', $data['driver_id'])->exists();
             }
             abort_unless($driverIsAttached, 422, 'The selected driver is not assigned to this resource.');
@@ -414,7 +440,7 @@ class OperationAssignmentController extends Controller
             ],
             'resourceDrivers' => [
                 'boat' => Boat_Driver::where('is_active', true)->get(['boat_id', 'id'])->groupBy('boat_id')->map(fn ($rows) => $rows->pluck('id')->values()),
-                'vehicle' => \App\Support\TenantDatabase::table('vehicle_drivers')->get(['vehicle_id', 'driver_id'])->groupBy('vehicle_id')->map(fn ($rows) => $rows->pluck('driver_id')->values()),
+                'vehicle' => TenantDatabase::table('vehicle_drivers')->get(['vehicle_id', 'driver_id'])->groupBy('vehicle_id')->map(fn ($rows) => $rows->pluck('driver_id')->values()),
             ],
         ];
     }
@@ -429,7 +455,7 @@ class OperationAssignmentController extends Controller
 
     private function accountId(string $preferredNumber, string $name, string $type): int
     {
-        $account = \App\Support\TenantDatabase::table('accounts')->where('name', $name)->where('type', $type)->first();
+        $account = TenantDatabase::table('accounts')->where('name', $name)->where('type', $type)->first();
         if ($account) {
             return (int) $account->id;
         }
@@ -441,13 +467,13 @@ class OperationAssignmentController extends Controller
                     'operation_ids' => "تعذر إنشاء حساب {$name} تلقائيًا؛ راجع دليل الحسابات.",
                 ]);
             }
-            if (! \App\Support\TenantDatabase::table('accounts')->where('acc_no', (string) $accountNumber)->exists()) {
+            if (! TenantDatabase::table('accounts')->where('acc_no', (string) $accountNumber)->exists()) {
                 break;
             }
             $accountNumber++;
         }
 
-        return (int) \App\Support\TenantDatabase::table('accounts')->insertGetId([
+        return (int) TenantDatabase::table('accounts')->insertGetId([
             'acc_no' => (string) $accountNumber,
             'name' => $name,
             'type' => $type,

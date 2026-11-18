@@ -18,6 +18,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/tmp/pdfs/
+/output/pdf/
 /vendor
 Homestead.json
 Homestead.yaml

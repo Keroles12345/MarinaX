@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -24,9 +25,9 @@ class SuperAdminTenantManagementTest extends TestCase
             $table->boolean('status')->default(true);
             $table->string('api_key_prefix', 24)->nullable();
             $table->string('api_key_hash', 64)->nullable();
-            $table->text('api_key_encrypted')->nullable();
             $table->date('api_key_expires_at')->nullable();
             $table->timestamp('api_key_last_used_at')->nullable();
+            $table->json('api_key_scopes')->nullable();
             $table->timestamps();
         });
         Schema::create('users', function (Blueprint $table) {
@@ -141,13 +142,13 @@ class SuperAdminTenantManagementTest extends TestCase
             ->assertSee('Company B');
 
         $this->post(route('superadmin.users.store'), [
-                'tenant_id' => $tenant->id,
-                'name' => 'Company Staff',
-                'username' => 'company-staff',
-                'email' => 'staff@example.test',
-                'role' => 'staff',
-                'password' => 'StaffPass123',
-            ])
+            'tenant_id' => $tenant->id,
+            'name' => 'Company Staff',
+            'username' => 'company-staff',
+            'email' => 'staff@example.test',
+            'role' => 'staff',
+            'password' => 'StaffPass123',
+        ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('users', [
@@ -226,7 +227,7 @@ class SuperAdminTenantManagementTest extends TestCase
             [$secondTenant->id, 'إيرادات', '4101'],
             [$secondTenant->id, 'مصروفات', '5101'],
         ] as [$tenantId, $type, $number]) {
-            $accounts[] = \Illuminate\Support\Facades\DB::table('accounts')->insertGetId([
+            $accounts[] = DB::table('accounts')->insertGetId([
                 'tenant_id' => $tenantId,
                 'acc_no' => $number,
                 'name' => $type,
@@ -243,7 +244,7 @@ class SuperAdminTenantManagementTest extends TestCase
             [$secondTenant->id, 'posted'],
             [$secondTenant->id, 'posted'],
         ] as $index => [$tenantId, $status]) {
-            $entries[] = \Illuminate\Support\Facades\DB::table('journal_entries')->insertGetId([
+            $entries[] = DB::table('journal_entries')->insertGetId([
                 'tenant_id' => $tenantId,
                 'movement_no' => 'PROFIT-'.$index,
                 'entry_date' => today()->toDateString(),
@@ -252,7 +253,7 @@ class SuperAdminTenantManagementTest extends TestCase
                 'updated_at' => now(),
             ]);
         }
-        \Illuminate\Support\Facades\DB::table('journal_lines')->insert([
+        DB::table('journal_lines')->insert([
             ['tenant_id' => $firstTenant->id, 'entry_id' => $entries[0], 'account_id' => $accounts[0], 'debit' => 0, 'credit' => 100],
             ['tenant_id' => $firstTenant->id, 'entry_id' => $entries[1], 'account_id' => $accounts[1], 'debit' => 20, 'credit' => 0],
             ['tenant_id' => $firstTenant->id, 'entry_id' => $entries[2], 'account_id' => $accounts[0], 'debit' => 0, 'credit' => 900],
@@ -285,7 +286,7 @@ class SuperAdminTenantManagementTest extends TestCase
     public function test_new_tenant_gets_a_booking_company_record(): void
     {
         $mainTenant = Tenant::query()->create(['name' => 'الشركة الرئيسية', 'status' => true]);
-        \Illuminate\Support\Facades\DB::table('extras')->insert([
+        DB::table('extras')->insert([
             'tenant_id' => $mainTenant->id,
             'name' => 'Lunch',
             'price' => 15,
@@ -313,7 +314,7 @@ class SuperAdminTenantManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $tenantId = (int) \Illuminate\Support\Facades\DB::table('tenants')
+        $tenantId = (int) DB::table('tenants')
             ->where('name', 'New Booking Company')
             ->value('id');
 
@@ -406,8 +407,12 @@ class SuperAdminTenantManagementTest extends TestCase
             'is_super_admin' => true,
         ]);
 
+        $scopes = ['trips:read', 'bookings:create'];
         $response = $this->actingAs($superAdmin, 'superadmin')
-            ->post(route('superadmin.tenants.api-key.generate', $tenant), ['expires_at' => today()->addMonth()->toDateString()])
+            ->post(route('superadmin.tenants.api-key.generate', $tenant), [
+                'expires_at' => today()->addMonth()->toDateString(),
+                'scopes' => $scopes,
+            ])
             ->assertRedirect(route('superadmin.tenants.apis'))
             ->assertSessionHas('generated_api_key');
 
@@ -419,36 +424,40 @@ class SuperAdminTenantManagementTest extends TestCase
             'api_key_hash' => hash('sha256', $key),
             'api_key_expires_at' => today()->addMonth()->startOfDay()->toDateTimeString(),
         ]);
-        $encryptedKey = \Illuminate\Support\Facades\DB::table('tenants')
+        $this->assertSame($scopes, json_decode(DB::table('tenants')
             ->where('id', $tenant->id)
-            ->value('api_key_encrypted');
-        $this->assertNotEmpty($encryptedKey);
-        $this->assertSame($key, \Illuminate\Support\Facades\Crypt::decryptString($encryptedKey));
+            ->value('api_key_scopes'), true));
 
-        $this->get(route('superadmin.tenants.apis'))
+        $page = $this->get(route('superadmin.tenants.apis'))
             ->assertOk()
             ->assertSee('واجهات API الشركات')
             ->assertSee('Company API')
             ->assertSee(substr($key, 0, 24))
-            ->assertSee('GET /trips')
+            ->assertSee('trips:read')
+            ->assertSee('bookings:read')
+            ->assertSee('تفاصيل الحجز')
             ->assertSee('api-success-overlay', false)
             ->assertSee('مبروك! تم إنشاء API بنجاح')
             ->assertSee('تاريخ انتهاء الصلاحية')
             ->assertSee(today()->addMonth()->toDateString())
             ->assertSee('/api/v1/trips')
+            ->assertSee('id="api-company-filter"', false)
+            ->assertSee('فتح التوثيق التفاعلي')
+            ->assertSee('مفاتيح فعالة')
             ->assertSee('class="api-company-key-value"', false)
-            ->assertSee('class="api-copy-button" data-copy-text="'.$key.'" data-copy-message="key"', false)
-            ->assertSee('data-copy-text="'.$key.'"', false)
-            ->assertSee('class="api-copy-button" data-copy-text="'.$key.'" data-copy-message="key"', false)
+            ->assertSee('data-copy-target="generated-api-key" data-copy-message="key"', false)
+            ->assertSee('نسخ مفتاح API')
             ->assertSee('data-copy-message="endpoint"', false)
             ->assertSee('نسخ الرابط')
             ->assertSee('Authorization: Bearer YOUR_API_KEY')
             ->assertSee('navigator.clipboard.writeText', false)
+            ->assertSee('Ctrl+C', false)
             ->assertSee($key);
+        $this->assertSame(1, substr_count($page->getContent(), $key));
         $this->get(route('superadmin.tenants.apis'))
             ->assertOk()
-            ->assertSee($key)
-            ->assertSee('class="api-copy-button" data-copy-text="'.$key.'" data-copy-message="key"', false);
+            ->assertDontSee($key)
+            ->assertSee(substr($key, 0, 24));
 
         $this->delete(route('superadmin.tenants.api-key.revoke', $tenant))
             ->assertRedirect(route('superadmin.tenants.apis'));
@@ -456,9 +465,31 @@ class SuperAdminTenantManagementTest extends TestCase
             'id' => $tenant->id,
             'api_key_prefix' => null,
             'api_key_hash' => null,
-            'api_key_encrypted' => null,
             'api_key_expires_at' => null,
         ]);
+    }
+
+    public function test_generated_api_key_is_not_returned_by_management_page_after_one_time_display(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'One Time API', 'status' => true]);
+        $superAdmin = User::withoutGlobalScopes()->create([
+            'name' => 'Platform Admin',
+            'username' => 'one-time-platform-admin',
+            'email' => 'one-time-api@example.test',
+            'password' => Hash::make('StrongPass123'),
+            'role' => 'admin',
+            'status' => true,
+            'is_super_admin' => true,
+        ]);
+        $response = $this->actingAs($superAdmin, 'superadmin')->post(
+            route('superadmin.tenants.api-key.generate', $tenant),
+            ['expires_at' => today()->addMonth()->toDateString(), 'scopes' => ['trips:read']],
+        );
+        $key = $response->getSession()->get('generated_api_key');
+
+        $this->get(route('superadmin.tenants.apis'))->assertOk()->assertSee($key);
+        $this->get(route('superadmin.tenants.apis'))->assertOk()->assertDontSee($key);
+        $this->assertFalse(Schema::hasColumn('tenants', 'api_key_encrypted'));
     }
 
     public function test_super_admin_has_a_separate_login_and_rejects_company_admins(): void

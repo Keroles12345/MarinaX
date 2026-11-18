@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Model;
 
 class operations extends Model
 {
@@ -42,36 +42,38 @@ class operations extends Model
         'amount_remaining',
         'remarks',
         'status',
+        'booking_status',
         'by_created',
     ];
 
     protected $casts = [
-        'trip_date'    => 'date',
-        'trip_time'    => 'string',
-        'time_pickup'  => 'string',
+        'trip_date' => 'date',
+        'trip_time' => 'string',
+        'time_pickup' => 'string',
 
-        'adults'       => 'integer',
-        'children'     => 'integer',
-        'infants'      => 'integer',
+        'adults' => 'integer',
+        'children' => 'integer',
+        'infants' => 'integer',
 
-        'price_adult'  => 'decimal:2',
-        'price_child'  => 'decimal:2',
+        'price_adult' => 'decimal:2',
+        'price_child' => 'decimal:2',
         'price_infant' => 'decimal:2',
 
-        'subtotal'        => 'decimal:2',
-        'amount_extra'    => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'amount_extra' => 'decimal:2',
         'amount_discount' => 'decimal:2',
-        'rate_tax'        => 'decimal:2',
-        'amount_tax'      => 'decimal:2',
-        'amount_total'    => 'decimal:2',
-        'totalamount'     => 'decimal:2',
-        'amount_paid'    => 'decimal:2',
-        'amount_remaining'=> 'decimal:2',
+        'rate_tax' => 'decimal:2',
+        'amount_tax' => 'decimal:2',
+        'amount_total' => 'decimal:2',
+        'totalamount' => 'decimal:2',
+        'amount_paid' => 'decimal:2',
+        'amount_remaining' => 'decimal:2',
     ];
+
     public function ticket()
-{
-    return $this->hasOne(Ticket::class, 'operation_id');
-}
+    {
+        return $this->hasOne(Ticket::class, 'operation_id');
+    }
 
     public function tripHotel()
     {
@@ -81,5 +83,15 @@ class operations extends Model
     public function trip()
     {
         return $this->belongsTo(Trips::class, 'id_trip');
+    }
+
+    public function currency()
+    {
+        return $this->belongsTo(Currencies::class, 'id_currency');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'operation_id');
     }
 }

@@ -6,16 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AccountChartService;
+use App\Support\TenantApiScopes;
+use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Crypt;
-use Illuminate\View\View;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
-use App\Support\TenantContext;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class TenantController extends Controller
 {
@@ -116,6 +116,7 @@ class TenantController extends Controller
             ->latest()
             ->limit(6)
             ->get(['id', 'name', 'email', 'role', 'status', 'tenant_id', 'created_at']);
+
         return view('superadmin.tenants.index', [
             'tenants' => $tenants,
             'recentUsers' => $recentUsers,
@@ -142,7 +143,7 @@ class TenantController extends Controller
         return view('superadmin.tenants.index', ['page' => 'companies', 'tenants' => $tenants]);
     }
 
-    public function apisIndex(): View
+    public function apisIndex(Request $request): View
     {
         $tenants = Tenant::query()->orderBy('name')->get();
         $tenants->each(function (Tenant $tenant): void {
@@ -170,26 +171,27 @@ class TenantController extends Controller
                     : 'لم يُستخدم بعد'
             );
             $tenant->setAttribute(
-                'api_key_value',
-                $tenant->api_key_encrypted ? Crypt::decryptString($tenant->api_key_encrypted) : null
-            );
-            $tenant->setAttribute(
-                'api_key_display',
-                $tenant->api_key_encrypted
-                    ? Crypt::decryptString($tenant->api_key_encrypted)
-                    : ($tenant->api_key_prefix ? 'أعد إنشاء المفتاح لإتاحته للنسخ' : '—')
+                'api_key_scopes_label',
+                implode(', ', $tenant->api_key_scopes ?? TenantApiScopes::DEFAULT)
             );
         });
 
         return view('superadmin.tenants.index', [
             'page' => 'company-apis',
             'tenants' => $tenants,
+            'availableApiScopes' => TenantApiScopes::AVAILABLE,
+            'generatedApiKey' => $request->session()->pull('generated_api_key'),
+            'generatedApiCompany' => $request->session()->pull('generated_api_company'),
             'apiEndpoints' => [
-                ['method' => 'GET', 'path' => '/trips', 'label' => 'قائمة الرحلات'],
-                ['method' => 'GET', 'path' => '/trips/{id}', 'label' => 'تفاصيل الرحلة'],
-                ['method' => 'GET', 'path' => '/companies', 'label' => 'الشركات التابعة'],
-                ['method' => 'GET', 'path' => '/currencies', 'label' => 'العملات'],
-                ['method' => 'POST', 'path' => '/bookings', 'label' => 'إنشاء حجز'],
+                ['method' => 'GET', 'path' => '/trips', 'label' => 'قائمة الرحلات', 'scope' => 'trips:read'],
+                ['method' => 'GET', 'path' => '/trips/{id}', 'label' => 'تفاصيل الرحلة', 'scope' => 'trips:read'],
+                ['method' => 'GET', 'path' => '/companies', 'label' => 'الشركات التابعة', 'scope' => 'companies:read'],
+                ['method' => 'GET', 'path' => '/currencies', 'label' => 'العملات', 'scope' => 'currencies:read'],
+                ['method' => 'POST', 'path' => '/bookings', 'label' => 'إنشاء حجز', 'scope' => 'bookings:create'],
+                ['method' => 'GET', 'path' => '/bookings/{id}', 'label' => 'تفاصيل الحجز', 'scope' => 'bookings:read'],
+                ['method' => 'PATCH', 'path' => '/bookings/{id}/status', 'label' => 'تحديث حالة الحجز', 'scope' => 'bookings:manage'],
+                ['method' => 'POST', 'path' => '/bookings/{id}/payments', 'label' => 'إنشاء طلب دفع', 'scope' => 'payments:create'],
+                ['method' => 'POST', 'path' => '/payments/{id}/refund', 'label' => 'طلب استرداد', 'scope' => 'payments:refund'],
             ],
         ]);
     }
@@ -324,13 +326,15 @@ class TenantController extends Controller
     {
         $data = $request->validate([
             'expires_at' => ['required', 'date', 'after_or_equal:today'],
+            'scopes' => ['required', 'array', 'min:1'],
+            'scopes.*' => ['required', 'string', Rule::in(TenantApiScopes::AVAILABLE)],
         ]);
         $key = 'mx_live_'.Str::random(64);
         $tenant->forceFill([
             'api_key_prefix' => substr($key, 0, 24),
             'api_key_hash' => hash('sha256', $key),
-            'api_key_encrypted' => Crypt::encryptString($key),
             'api_key_expires_at' => $data['expires_at'],
+            'api_key_scopes' => array_values(array_unique($data['scopes'])),
         ])->save();
 
         return redirect()
@@ -345,8 +349,8 @@ class TenantController extends Controller
         $tenant->forceFill([
             'api_key_prefix' => null,
             'api_key_hash' => null,
-            'api_key_encrypted' => null,
             'api_key_expires_at' => null,
+            'api_key_scopes' => null,
         ])->save();
 
         return redirect()->route('superadmin.tenants.apis')->with('status', 'تم إلغاء مفتاح API للشركة.');
