@@ -164,6 +164,12 @@ class TenantController extends Controller
                     : 'لا يوجد تاريخ انتهاء محدد'
             );
             $tenant->setAttribute(
+                'api_key_last_used_label',
+                $tenant->api_key_last_used_at
+                    ? $tenant->api_key_last_used_at->format('Y-m-d H:i:s')
+                    : 'لم يُستخدم بعد'
+            );
+            $tenant->setAttribute(
                 'api_key_value',
                 $tenant->api_key_encrypted ? Crypt::decryptString($tenant->api_key_encrypted) : null
             );

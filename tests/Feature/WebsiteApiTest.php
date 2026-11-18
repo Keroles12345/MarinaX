@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -24,6 +25,7 @@ class WebsiteApiTest extends TestCase
             $table->string('api_key_prefix', 24)->nullable();
             $table->string('api_key_hash', 64)->nullable();
             $table->date('api_key_expires_at')->nullable();
+            $table->timestamp('api_key_last_used_at')->nullable();
         });
         Schema::create('regions', function (Blueprint $table): void {
             $table->id();
@@ -255,6 +257,7 @@ class WebsiteApiTest extends TestCase
             ->assertJsonPath('data.0.primary_image', Storage::disk('public')->url($imagePath))
             ->assertJsonPath('data.0.images.0', Storage::disk('public')->url($imagePath))
             ->assertJsonPath('data.0.prices.0.company_id', $companyId);
+        $this->assertNotNull(DB::table('tenants')->where('id', $tenantId)->value('api_key_last_used_at'));
 
         $this->withToken($this->apiKey)
             ->postJson('/api/v1/bookings', [
@@ -299,5 +302,47 @@ class WebsiteApiTest extends TestCase
             ->getJson('/api/v1/trips')
             ->assertUnauthorized()
             ->assertJsonPath('message', 'انتهت صلاحية مفتاح API.');
+    }
+
+    public function test_api_documentation_routes_are_public_and_serve_the_openapi_contract(): void
+    {
+        $this->get('/api/documentation')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/html; charset=UTF-8');
+        $this->assertFileExists(public_path('api-documentation.html'));
+        $this->assertStringContainsString('SwaggerUIBundle', file_get_contents(public_path('api-documentation.html')));
+
+        $this->get('/api/openapi.yaml')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/yaml; charset=UTF-8');
+        $this->assertFileExists(public_path('openapi.yaml'));
+        $openApi = file_get_contents(public_path('openapi.yaml'));
+        foreach (app('router')->getRoutes() as $route) {
+            if (! str_starts_with((string) $route->getName(), 'api.')) {
+                continue;
+            }
+
+            $path = preg_replace('/^api\//', '', $route->uri());
+            $this->assertStringContainsString("  /{$path}:", $openApi);
+        }
+    }
+
+    public function test_tenant_api_rate_limit_is_enforced(): void
+    {
+        DB::table('tenants')->insert([
+            'name' => 'Rate Limited Tenant',
+            'status' => true,
+            'api_key_prefix' => substr($this->apiKey, 0, 24),
+            'api_key_hash' => hash('sha256', $this->apiKey),
+        ]);
+        Log::spy();
+
+        for ($request = 0; $request < 60; $request++) {
+            $this->withToken($this->apiKey)->getJson('/api/v1/trips')->assertOk();
+        }
+
+        $this->withToken($this->apiKey)
+            ->getJson('/api/v1/trips')
+            ->assertTooManyRequests();
     }
 }

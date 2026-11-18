@@ -26,6 +26,7 @@ class SuperAdminTenantManagementTest extends TestCase
             $table->string('api_key_hash', 64)->nullable();
             $table->text('api_key_encrypted')->nullable();
             $table->date('api_key_expires_at')->nullable();
+            $table->timestamp('api_key_last_used_at')->nullable();
             $table->timestamps();
         });
         Schema::create('users', function (Blueprint $table) {

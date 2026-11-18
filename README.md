@@ -1,73 +1,197 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MarinaX
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+MarinaX is a Laravel-based operations and business management platform for tour
+operators. It combines trip and hotel management, customer bookings, staff and
+resource operations, accounting, and tenant-specific website APIs.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Multi-tenant companies with tenant-scoped business records.
+- Separate Super Admin, administration, and staff areas.
+- Trip catalog with descriptions, WebP image galleries, regions, inclusions,
+  exclusions, FAQs, hotels, and company-specific prices.
+- Tenant API keys with a `mx_live_` prefix, SHA-256 hash verification,
+  expiration, revocation/rotation, and encrypted-at-rest display for the
+  Super Admin copy action.
+- API last-use tracking, sanitized request/authentication logging, and
+  API rate limits by client IP.
+- Booking creation from a tenant website, with prices calculated server-side.
+  Website-created bookings start as `pending`; no payment is charged.
+- Operations, accounting, vehicle/boat resources, staff access, and reports
+  based on the existing application modules.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technology
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.3+
+- Laravel 13
+- MySQL or SQLite
+- PHPUnit 12 and Laravel Pint
+- Vite for frontend assets
 
-## Multi-company setup
+## Architecture
 
-The first tenant migration assigns existing application records to the initial company, **الشركة الرئيسية**. After deploying the migrations, create the platform administrator once:
+HTTP routes are divided between `routes/web.php` and `routes/api.php`.
+Controllers coordinate requests and validation; Eloquent models represent
+business data. Tenant identity is initialized by middleware and used by
+tenant-aware models and `App\Support\TenantDatabase`. Shared data (such as
+currency definitions and the shared chart of accounts) is deliberately kept
+separate from tenant-owned data.
 
-```bash
-php artisan migrate
-php artisan app:bootstrap-super-admin
+```mermaid
+erDiagram
+    TENANTS ||--o{ USERS : owns
+    TENANTS ||--o{ TRIPS : owns
+    TENANTS ||--o{ COMPANIES : owns
+    TRIPS ||--o{ TRIP_IMAGES : has
+    TRIPS ||--o{ PRICES_COMPANY : priced_for
+    COMPANIES ||--o{ PRICES_COMPANY : receives
+    CURRENCIES ||--o{ PRICES_COMPANY : denominates
+    TRIPS ||--o{ OPERATIONS : booked_as
+    CUSTOMERS ||--o{ OPERATIONS : books
 ```
 
-The bootstrap command prompts for the administrator's name, username, email, and password. The Super Admin uses the separate login at `/superadmin`; after signing in, the dashboard at `/superadmin/dashboard` manages tenants and company users.
+The diagram is a high-level view; consult `database/migrations` for the
+authoritative schema and constraints.
 
-The shared account chart is based on the existing accounts in **الشركة الرئيسية**. Its account numbers, names, and types are provisioned for every existing company and for each new company; companies can add their own accounts but cannot edit or delete shared account definitions. Opening balances, budgets, and journal activity remain company-specific.
+## Installation
 
-Vehicle types are shared across all companies. Vehicle records, their assignments, regions, and financial activity remain company-specific.
+1. Install PHP 8.3+, Composer, Node.js/npm, and the PHP extensions required by
+   Laravel and the configured database.
+2. Install dependencies and create the environment file:
 
-## Learning Laravel
+   ```sh
+   composer install
+   copy .env.example .env
+   php artisan key:generate
+   npm install
+   npm run build
+   ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+   On macOS/Linux, use `cp .env.example .env` instead of `copy`.
+3. Configure the database in `.env`, then apply migrations:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+   ```sh
+   php artisan migrate
+   ```
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+4. Create the initial Super Admin interactively:
 
-## Agentic Development
+   ```sh
+   php artisan app:bootstrap-super-admin
+   ```
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+5. Link public storage if trip images will be uploaded, then start the app:
 
-```bash
-composer require laravel/boost --dev
+   ```sh
+   php artisan storage:link
+   php artisan serve
+   ```
 
-php artisan boost:install
+The Super Admin login is at `/superadmin`. Do not run test-data seeders against
+a production database.
+
+## Configuration
+
+Important environment settings (see `.env.example` for the full Laravel
+configuration):
+
+| Variable | Purpose |
+|---|---|
+| `APP_KEY` | Laravel encryption key; required to decrypt the stored API key copy |
+| `APP_URL` | Public application URL used when generating links |
+| `DB_CONNECTION` | Database driver, typically `mysql` or `sqlite` |
+| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | Database connection |
+| `FILESYSTEM_DISK` | Storage disk for uploads; trip images use the `public` disk |
+| `QUEUE_CONNECTION` | Queue driver; defaults to `database` in `.env.example` |
+| `CACHE_STORE`, `SESSION_DRIVER` | Cache and session storage |
+| `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` | Outbound mail configuration |
+
+Use a unique, private `APP_KEY` and `APP_DEBUG=false` in production. Keep `.env`
+and all API keys out of source control. Back up the database and uploaded
+storage together.
+
+## Tenant Website API
+
+The OpenAPI 3.0 contract and interactive Swagger UI are available at:
+
+- `GET /api/documentation`
+- `GET /api/openapi.yaml`
+
+The documented tenant website API base path is `/api/v1`. Create or rotate a
+tenant key from **Super Admin → Company APIs**, and pass the complete key using the
+`Authorization` header:
+
+```http
+Authorization: Bearer mx_live_REDACTED
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Do not put the key in a URL, query string, browser link, or client-side source
+code. Keep it on a trusted server. Current API operations:
 
-## Contributing
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/trips` | List active trips and their public website data |
+| GET | `/api/v1/trips/{trip}` | Get an active trip |
+| GET | `/api/v1/companies` | List active tenant companies |
+| GET | `/api/v1/currencies` | List active currencies |
+| POST | `/api/v1/bookings` | Create a pending booking |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+The API is limited to 60 requests per minute per client IP; booking creation is
+limited to 10 requests per minute per client IP. Authentication and request
+logs never include the API secret. Booking creation validates tenant ownership
+and computes the amount from configured server-side prices. It does not collect
+payment credentials, charge a card, or confirm a booking.
 
-## Code of Conduct
+The application also has session- and role-protected accounting JSON routes
+under `/api/*`, registered in `routes/web.php`; they are internal dashboard
+endpoints and are not part of this tenant website API specification.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Development and tests
 
-## Security Vulnerabilities
+```sh
+php artisan test
+vendor/bin/pint --test
+npm run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Feature tests use an isolated in-memory SQLite database. Do not point the test
+environment at production data. The test suite also validates tenant isolation,
+API key expiry, API documentation routes, booking creation, and management
+flows.
+
+## Queues and mail
+
+The `.env.example` defaults to the database queue and Laravel's log mailer.
+For a database queue in a deployed environment, migrate the queue tables if
+they are not already present and run a worker, for example:
+
+```sh
+php artisan queue:work --tries=3
+```
+
+Configure a real mail transport only when outbound mail is ready. Booking
+notifications and payment-provider integrations are not currently implemented.
+
+## CI
+
+GitHub Actions runs the Laravel test suite and Pint style check on pushes and
+pull requests. It does not deploy to production.
+
+## Screenshots
+
+Screenshots are not included yet.
+
+## Roadmap
+
+- Booking status transition rules and immutable status history.
+- Payment records, provider abstraction, webhook idempotency, and refund flow.
+- Queued booking notifications and reminder scheduling.
+- API scopes and configurable request-log retention.
+- Expanded authorization, accounting, rate-limit, and payment tests.
+- Static analysis after selecting a compatible tool and establishing a
+  baseline.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+`composer.json` declares the MIT license. Confirm the repository owner's intent
+before redistributing the project.

@@ -418,6 +418,7 @@
                             <p class="api-company-state">
                                 <span class="api-key-status {{ $tenant->api_key_status_class }}">{{ $tenant->api_key_status }}</span>
                                 <span>{{ $tenant->api_key_expiry_label }}</span>
+                                <span>آخر استخدام: {{ $tenant->api_key_last_used_label }}</span>
                             </p>
                             <div class="api-company-keybox">
                                 <div class="api-company-key-label">

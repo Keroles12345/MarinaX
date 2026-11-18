@@ -14,6 +14,7 @@ class Tenant extends Model
     protected $casts = [
         'status' => 'boolean',
         'api_key_expires_at' => 'date',
+        'api_key_last_used_at' => 'datetime',
     ];
 
     public function users(): HasMany
