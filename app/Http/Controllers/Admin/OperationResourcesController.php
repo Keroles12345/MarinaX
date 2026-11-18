@@ -12,12 +12,15 @@ use App\Models\Extras;
 use App\Models\Hotel;
 use App\Models\Supplier;
 use App\Models\Trips;
+use App\Services\TripImageStorage;
 use App\Models\Vehicle;
 use App\Models\VehicleType;
 use App\Services\OperationRevenueAccountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class OperationResourcesController extends Controller
 {
@@ -395,7 +398,7 @@ class OperationResourcesController extends Controller
     {
         $includeArchived = request()->boolean('include_archived');
         $trips = Trips::query()
-            ->with('region')
+            ->with(['region', 'images'])
             ->withCount(['tripHotels as active_hotels_count' => fn ($query) => $query->where('status', true)])
             ->when(! $includeArchived, fn ($query) => $query->where('status', true))
             ->orderBy('name')
@@ -431,18 +434,61 @@ class OperationResourcesController extends Controller
         return redirect()->route($route, $query);
     }
 
-    public function storeTrip(Request $request)
+    public function storeTrip(Request $request, TripImageStorage $imageStorage)
     {
         $data = $this->validateTrip($request);
-        $trip = Trips::query()->create($data);
+        $images = $data['images'] ?? [];
+        $primaryImage = $data['primary_image'] ?? null;
+        unset($data['images'], $data['remove_images'], $data['replace_images'], $data['primary_image']);
+        $createdPaths = [];
+
+        try {
+            $trip = DB::transaction(function () use ($data, $images, $primaryImage, $imageStorage, &$createdPaths): Trips {
+                $trip = Trips::query()->create($data);
+                $this->syncTripImages($trip, $images, [], [], $primaryImage, $imageStorage, $createdPaths);
+
+                return $trip;
+            });
+        } catch (\Throwable $exception) {
+            try {
+                $this->removeStoredImages($createdPaths);
+            } catch (\Throwable $cleanupException) {
+                report($cleanupException);
+            }
+            throw $exception;
+        }
+
         $this->audit('إضافة رحلة', "{$trip->name} (#{$trip->id})");
 
         return redirect()->route('accounting.trips')->with('status', 'تمت إضافة الرحلة بنجاح.');
     }
 
-    public function updateTrip(Request $request, Trips $trip)
+    public function updateTrip(Request $request, Trips $trip, TripImageStorage $imageStorage)
     {
-        $trip->update($this->validateTrip($request, $trip));
+        $data = $this->validateTrip($request, $trip);
+        $images = $data['images'] ?? [];
+        $removeIds = $data['remove_images'] ?? [];
+        $replaceImages = $data['replace_images'] ?? [];
+        $primaryImage = $data['primary_image'] ?? null;
+        unset($data['images'], $data['remove_images'], $data['replace_images'], $data['primary_image']);
+        $createdPaths = [];
+        $removedPaths = [];
+
+        try {
+            DB::transaction(function () use ($trip, $data, $images, $removeIds, $replaceImages, $primaryImage, $imageStorage, &$createdPaths, &$removedPaths): void {
+                $trip->update($data);
+                $this->syncTripImages($trip, $images, $removeIds, $replaceImages, $primaryImage, $imageStorage, $createdPaths, $removedPaths);
+            });
+        } catch (\Throwable $exception) {
+            try {
+                $this->removeStoredImages($createdPaths);
+            } catch (\Throwable $cleanupException) {
+                report($cleanupException);
+            }
+            throw $exception;
+        }
+
+        $this->removeStoredImages($removedPaths);
         $this->audit('تعديل رحلة', "{$trip->name} (#{$trip->id})");
 
         return $this->redirectToResourcePage($request, 'accounting.trips', 'تم تحديث بيانات الرحلة.');
@@ -483,7 +529,7 @@ class OperationResourcesController extends Controller
 
     private function validateTrip(Request $request, ?Trips $trip = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => [
                 'required',
                 'string',
@@ -501,7 +547,183 @@ class OperationResourcesController extends Controller
             'time_trip' => ['nullable', 'date_format:H:i'],
             'description' => ['nullable', 'string', 'max:4000'],
             'status' => [$trip ? 'required' : 'sometimes', 'boolean'],
+            'includes_items' => ['nullable', 'array', 'max:100'],
+            'includes_items.*' => ['nullable', 'string', 'max:500'],
+            'excludes_items' => ['nullable', 'array', 'max:100'],
+            'excludes_items.*' => ['nullable', 'string', 'max:500'],
+            'faq_items' => ['nullable', 'array', 'max:50'],
+            'faq_items.*' => ['array'],
+            'faq_items.*.question' => ['nullable', 'string', 'max:1000'],
+            'faq_items.*.answer' => ['nullable', 'string', 'max:2000'],
+            'includes_text' => ['nullable', 'string', 'max:8000'],
+            'excludes_text' => ['nullable', 'string', 'max:8000'],
+            'faq_questions' => ['nullable', 'string', 'max:8000'],
+            'faq_answers' => ['nullable', 'string', 'max:8000'],
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => ['image', 'mimes:jpeg,png,webp', 'max:8192'],
+            'primary_image' => ['nullable', 'string', 'max:40', 'regex:/^(existing:\d+|new:\d+)$/'],
+            'replace_images' => ['nullable', 'array', 'max:10'],
+            'replace_images.*' => ['image', 'mimes:jpeg,png,webp', 'max:8192'],
+            'remove_images' => ['nullable', 'array', 'max:10'],
+            'remove_images.*' => [
+                'integer',
+                Rule::exists('trip_images', 'id')->where('tenant_id', \App\Support\TenantContext::id()),
+            ],
         ]) + ['status' => $request->boolean('status', true)];
+
+        $includes = isset($data['includes_items'])
+            ? $this->cleanTripItems($data['includes_items'])
+            : $this->splitTripLines($data['includes_text'] ?? '');
+        $excludes = isset($data['excludes_items'])
+            ? $this->cleanTripItems($data['excludes_items'])
+            : $this->splitTripLines($data['excludes_text'] ?? '');
+        $faqs = [];
+        if (isset($data['faq_items'])) {
+            foreach ($data['faq_items'] as $faq) {
+                $question = trim($faq['question'] ?? '');
+                $answer = trim($faq['answer'] ?? '');
+                if ($question === '' && $answer === '') {
+                    continue;
+                }
+                if ($question === '' || $answer === '') {
+                    throw ValidationException::withMessages([
+                        'faq_items' => 'يجب إدخال السؤال والإجابة معًا لكل سؤال.',
+                    ]);
+                }
+                $faqs[] = ['question' => $question, 'answer' => $answer];
+            }
+        } else {
+            $questions = $this->splitTripLines($data['faq_questions'] ?? '');
+            $answers = $this->splitTripLines($data['faq_answers'] ?? '');
+            if (count($questions) !== count($answers)) {
+                throw ValidationException::withMessages([
+                    'faq_answers' => 'يجب إدخال إجابة لكل سؤال وبنفس الترتيب.',
+                ]);
+            }
+            $faqs = array_map(
+                fn (string $question, string $answer): array => ['question' => $question, 'answer' => $answer],
+                $questions,
+                $answers,
+            );
+        }
+
+        $data['includes'] = $includes;
+        $data['excludes'] = $excludes;
+        $data['faqs'] = $faqs;
+        unset(
+            $data['includes_items'],
+            $data['excludes_items'],
+            $data['faq_items'],
+            $data['includes_text'],
+            $data['excludes_text'],
+            $data['faq_questions'],
+            $data['faq_answers'],
+        );
+
+        return $data;
+    }
+
+    private function splitTripLines(string $text): array
+    {
+        return array_values(array_filter(
+            array_map('trim', preg_split('/\R/u', $text) ?: []),
+            fn (string $line): bool => $line !== '',
+        ));
+    }
+
+    private function cleanTripItems(array $items): array
+    {
+        return array_values(array_filter(
+            array_map(static fn ($item): string => trim((string) $item), $items),
+            static fn (string $item): bool => $item !== '',
+        ));
+    }
+
+    private function syncTripImages(
+        Trips $trip,
+        array $uploads,
+        array $removeIds,
+        array $replacements,
+        ?string $primaryImage,
+        TripImageStorage $imageStorage,
+        array &$createdPaths,
+        array &$removedPaths = [],
+    ): void {
+        $replaceIds = array_map('intval', array_keys($replacements));
+        if (array_intersect(array_map('intval', $removeIds), $replaceIds) !== []) {
+            throw ValidationException::withMessages([
+                'replace_images' => 'لا يمكن حذف الصورة واستبدالها في نفس الوقت.',
+            ]);
+        }
+
+        $toRemove = $trip->images()->whereIn('id', $removeIds)->get();
+        $toReplace = $trip->images()->whereIn('id', $replaceIds)->get();
+        if (
+            $toRemove->count() !== count(array_unique($removeIds))
+            || $toReplace->count() !== count(array_unique($replaceIds))
+        ) {
+            throw ValidationException::withMessages([
+                'remove_images' => 'بعض الصور المحددة لا تخص هذه الرحلة.',
+            ]);
+        }
+
+        if ($trip->images()->count() - $toRemove->count() + count($uploads) > 10) {
+            throw ValidationException::withMessages([
+                'images' => 'الحد الأقصى هو 10 صور لكل رحلة.',
+            ]);
+        }
+
+        foreach ($toRemove as $image) {
+            $removedPaths[] = $image->path;
+            $image->delete();
+        }
+
+        foreach ($toReplace as $image) {
+            $upload = $replacements[$image->id] ?? $replacements[(string) $image->id];
+            $path = $imageStorage->store($upload, (int) \App\Support\TenantContext::id());
+            $createdPaths[] = $path;
+            $removedPaths[] = $image->path;
+            $image->update(['path' => $path]);
+        }
+
+        $sortOrder = (int) ($trip->images()->max('sort_order') ?? -1) + 1;
+        $newImages = [];
+        foreach (array_values($uploads) as $index => $upload) {
+            $path = $imageStorage->store($upload, (int) \App\Support\TenantContext::id());
+            $createdPaths[] = $path;
+            $newImages[$index] = $trip->images()->create(['path' => $path, 'sort_order' => $sortOrder++]);
+        }
+
+        $images = $trip->images()->orderBy('sort_order')->get();
+        if ($primaryImage !== null) {
+            [$type, $value] = explode(':', $primaryImage, 2);
+            $primary = $type === 'existing'
+                ? $images->firstWhere('id', (int) $value)
+                : ($newImages[(int) $value] ?? null);
+
+            if (! $primary) {
+                throw ValidationException::withMessages([
+                    'primary_image' => 'الصورة الرئيسية المختارة غير موجودة ضمن صور الرحلة.',
+                ]);
+            }
+
+            $images = $images->reject(fn ($image): bool => $image->is($primary))
+                ->prepend($primary)
+                ->values();
+        }
+
+        foreach ($images as $index => $image) {
+            if ((int) $image->sort_order !== $index) {
+                $image->update(['sort_order' => $index]);
+            }
+        }
+    }
+
+    private function removeStoredImages(array $paths): void
+    {
+        if ($paths !== [] && ! Storage::disk('public')->delete($paths)) {
+            throw new \RuntimeException('تعذر حذف صور الرحلة من التخزين.');
+        }
     }
 
     private function validateHotel(Request $request, ?Hotel $hotel = null): array

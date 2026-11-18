@@ -9,7 +9,12 @@ class Tenant extends Model
 {
     protected $fillable = ['name', 'email', 'phone', 'address', 'status'];
 
-    protected $casts = ['status' => 'boolean'];
+    protected $hidden = ['api_key_hash', 'api_key_encrypted'];
+
+    protected $casts = [
+        'status' => 'boolean',
+        'api_key_expires_at' => 'date',
+    ];
 
     public function users(): HasMany
     {

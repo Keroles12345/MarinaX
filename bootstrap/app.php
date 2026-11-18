@@ -10,6 +10,7 @@ use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -23,6 +24,7 @@ $middleware->alias([
 'accounting-role'=>\App\Http\Middleware\AccountingRoleMiddleware::class,
 'supervisor'=>\App\Http\Middleware\SupervisorMiddleware::class,
 'system-permission'=>\App\Http\Middleware\SystemPermissionMiddleware::class,
+'tenant.api-key'=>\App\Http\Middleware\AuthenticateTenantApiKey::class,
 'StaffSales'=>\App\Http\Middleware\StaffSallesMiddleware::class,
 'StaffOperations'=>\App\Http\Middleware\StaffOperationsMiddleware::class,
 'StaffReseller'=>\App\Http\Middleware\StaffResellerMiddleware::class,

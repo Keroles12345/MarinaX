@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -141,6 +142,52 @@ class TenantController extends Controller
         return view('superadmin.tenants.index', ['page' => 'companies', 'tenants' => $tenants]);
     }
 
+    public function apisIndex(): View
+    {
+        $tenants = Tenant::query()->orderBy('name')->get();
+        $tenants->each(function (Tenant $tenant): void {
+            $expired = $tenant->api_key_expires_at && today()->gt($tenant->api_key_expires_at);
+            $tenant->setAttribute(
+                'api_key_status',
+                ! $tenant->api_key_prefix
+                    ? 'لم يتم إنشاء مفتاح API لهذه الشركة'
+                    : ($expired ? 'انتهت صلاحية مفتاح API' : 'مفتاح API مفعّل')
+            );
+            $tenant->setAttribute(
+                'api_key_status_class',
+                ! $tenant->api_key_prefix ? 'is-missing' : ($expired ? 'is-expired' : '')
+            );
+            $tenant->setAttribute(
+                'api_key_expiry_label',
+                $tenant->api_key_expires_at
+                    ? 'تاريخ الانتهاء: '.$tenant->api_key_expires_at->format('Y-m-d')
+                    : 'لا يوجد تاريخ انتهاء محدد'
+            );
+            $tenant->setAttribute(
+                'api_key_value',
+                $tenant->api_key_encrypted ? Crypt::decryptString($tenant->api_key_encrypted) : null
+            );
+            $tenant->setAttribute(
+                'api_key_display',
+                $tenant->api_key_encrypted
+                    ? Crypt::decryptString($tenant->api_key_encrypted)
+                    : ($tenant->api_key_prefix ? 'أعد إنشاء المفتاح لإتاحته للنسخ' : '—')
+            );
+        });
+
+        return view('superadmin.tenants.index', [
+            'page' => 'company-apis',
+            'tenants' => $tenants,
+            'apiEndpoints' => [
+                ['method' => 'GET', 'path' => '/trips', 'label' => 'قائمة الرحلات'],
+                ['method' => 'GET', 'path' => '/trips/{id}', 'label' => 'تفاصيل الرحلة'],
+                ['method' => 'GET', 'path' => '/companies', 'label' => 'الشركات التابعة'],
+                ['method' => 'GET', 'path' => '/currencies', 'label' => 'العملات'],
+                ['method' => 'POST', 'path' => '/bookings', 'label' => 'إنشاء حجز'],
+            ],
+        ]);
+    }
+
     public function createTenantPage(): View
     {
         return view('superadmin.tenants.index', ['page' => 'create-company']);
@@ -265,6 +312,38 @@ class TenantController extends Controller
         $tenant->update($data);
 
         return redirect()->route('superadmin.tenants.index')->with('status', 'تم تحديث بيانات الشركة.');
+    }
+
+    public function generateApiKey(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $data = $request->validate([
+            'expires_at' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+        $key = 'mx_live_'.Str::random(64);
+        $tenant->forceFill([
+            'api_key_prefix' => substr($key, 0, 24),
+            'api_key_hash' => hash('sha256', $key),
+            'api_key_encrypted' => Crypt::encryptString($key),
+            'api_key_expires_at' => $data['expires_at'],
+        ])->save();
+
+        return redirect()
+            ->route('superadmin.tenants.apis')
+            ->with('status', 'تم إنشاء مفتاح API. انسخه الآن؛ لن يظهر مرة أخرى.')
+            ->with('generated_api_key', $key)
+            ->with('generated_api_company', $tenant->name);
+    }
+
+    public function revokeApiKey(Tenant $tenant): RedirectResponse
+    {
+        $tenant->forceFill([
+            'api_key_prefix' => null,
+            'api_key_hash' => null,
+            'api_key_encrypted' => null,
+            'api_key_expires_at' => null,
+        ])->save();
+
+        return redirect()->route('superadmin.tenants.apis')->with('status', 'تم إلغاء مفتاح API للشركة.');
     }
 
     public function assignUser(Request $request, int $userId): RedirectResponse

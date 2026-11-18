@@ -75,6 +75,7 @@
                     <div class="superadmin-nav-links">
                         <a href="{{ route('superadmin.dashboard') }}" class="{{ request()->routeIs('superadmin.dashboard') ? 'active' : '' }}"><span class="superadmin-nav-icon">🏠</span>{{ __('لوحة التحكم') }}</a>
                         <a href="{{ route('superadmin.tenants.index') }}" class="{{ request()->routeIs('superadmin.tenants.index') ? 'active' : '' }}"><span class="superadmin-nav-icon">🏢</span>{{ __('إدارة الشركات') }}</a>
+                        <a href="{{ route('superadmin.tenants.apis') }}" class="{{ request()->routeIs('superadmin.tenants.apis') ? 'active' : '' }}"><span class="superadmin-nav-icon">🔌</span>{{ __('واجهات API الشركات') }}</a>
                         <a href="{{ route('superadmin.tenants.create') }}" class="{{ request()->routeIs('superadmin.tenants.create') ? 'active' : '' }}"><span class="superadmin-nav-icon">➕</span>{{ __('إضافة شركة') }}</a>
                         <a href="{{ route('superadmin.users.create') }}" class="{{ request()->routeIs('superadmin.users.create') ? 'active' : '' }}"><span class="superadmin-nav-icon">👤</span>{{ __('إضافة مستخدم') }}</a>
                         <a href="{{ route('superadmin.users.index') }}" class="{{ request()->routeIs('superadmin.users.index') ? 'active' : '' }}"><span class="superadmin-nav-icon">👥</span>{{ __('إدارة المستخدمين') }}</a>

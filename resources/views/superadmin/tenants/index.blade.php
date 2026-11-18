@@ -1,7 +1,7 @@
 @extends('superadmin.layout')
 
-@section('title', ['dashboard' => 'لوحة تحكم سوبر فايزر', 'companies' => 'إدارة الشركات', 'create-company' => 'إضافة شركة', 'create-user' => 'إضافة مستخدم', 'users' => 'إدارة المستخدمين'][$page] ?? 'لوحة سوبر فايزر')
-@section('page-title', ['dashboard' => 'لوحة التحكم', 'companies' => 'إدارة الشركات', 'create-company' => 'إضافة شركة', 'create-user' => 'إضافة مستخدم', 'users' => 'إدارة المستخدمين'][$page] ?? 'لوحة سوبر فايزر')
+@section('title', ['dashboard' => 'لوحة تحكم سوبر فايزر', 'companies' => 'إدارة الشركات', 'company-apis' => 'واجهات API الشركات', 'create-company' => 'إضافة شركة', 'create-user' => 'إضافة مستخدم', 'users' => 'إدارة المستخدمين'][$page] ?? 'لوحة سوبر فايزر')
+@section('page-title', ['dashboard' => 'لوحة التحكم', 'companies' => 'إدارة الشركات', 'company-apis' => 'واجهات API الشركات', 'create-company' => 'إضافة شركة', 'create-user' => 'إضافة مستخدم', 'users' => 'إدارة المستخدمين'][$page] ?? 'لوحة سوبر فايزر')
 
 @section('body')
     <style>
@@ -83,6 +83,67 @@
         .company-form input,.company-form select{min-width:0;width:100%;height:38px;padding:8px 10px;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:#24364e;font:inherit;font-size:12px}
         .company-form .company-save{display:flex;align-items:center;justify-content:space-between;gap:10px;grid-column:1/-1}
         .company-users-count{color:#738197;font-size:12px}
+        .api-company-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:16px}
+        .api-company-card{overflow:hidden;padding:0;border:1px solid #e3eaf3;border-radius:17px;background:#fff;box-shadow:0 8px 24px #17365b0b;transition:border-color .18s,box-shadow .18s,transform .18s}
+        .api-company-card:hover{transform:translateY(-2px);border-color:#cddced;box-shadow:0 14px 32px #17365b14}
+        .api-company-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 19px;border-bottom:1px solid #edf1f6;background:linear-gradient(110deg,#f9fbfe,#fff)}
+        .api-company-identity{display:flex;min-width:0;align-items:center;gap:11px}
+        .api-company-avatar{display:grid;width:38px;height:38px;flex:0 0 38px;place-items:center;border:1px solid #dce8f5;border-radius:12px;background:#edf4fc;color:#245ca6;font-size:16px;font-weight:850}
+        .api-company-head strong{overflow:hidden;color:#223a5e;font-size:15px;text-overflow:ellipsis;white-space:nowrap}
+        .api-company-content{display:grid;gap:16px;padding:18px 19px}
+        .api-company-state{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0;color:#66758b;font-size:11px}
+        .api-key-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid #dcefe4;border-radius:99px;background:#f0faf4;color:#13804b;font-size:10px;font-weight:800}
+        .api-key-status:before{width:6px;height:6px;border-radius:50%;background:currentColor;content:""}
+        .api-key-status.is-expired,.api-key-status.is-missing{border-color:#f5dfd5;background:#fff7f2;color:#b54726}
+        .api-company-keybox{padding:12px;border:1px solid #e4ebf3;border-radius:12px;background:linear-gradient(135deg,#f8fafc,#f4f7fb)}
+        .api-company-key-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:#66758b;font-size:11px;font-weight:800}
+        .api-company-key-row{display:flex;align-items:stretch;gap:8px}
+        .api-company-key-value{display:flex;min-width:0;min-height:43px;flex:1;align-items:center;overflow-wrap:anywhere;padding:10px 11px;border:1px solid #e1e8f0;border-radius:9px;background:#fff;color:#17365b;direction:ltr;text-align:left;font-size:11px;line-height:1.55;user-select:all}
+        .api-company-key-row .api-copy-button{display:inline-flex;min-height:43px!important;align-items:center;justify-content:center;gap:7px;padding:8px 11px!important;border-color:#cddced!important;border-radius:9px!important;background:#fff!important;color:#245ca6!important;font-size:11px!important;font-weight:800!important;white-space:nowrap}
+        .api-company-key-row .api-copy-button:hover{border-color:#8fb1d9!important;background:#edf5ff!important}
+        .api-company-key-row .api-copy-button svg{width:15px;height:15px}
+        .api-key-prefix{display:block;overflow-wrap:anywhere;margin:8px 0;padding:10px 12px;border:1px solid #e7edf5;border-radius:8px;background:#fff;color:#245ca6;direction:ltr;text-align:left;font-size:12px}
+        .api-key-copy-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+        .api-key-copy-row .api-key-prefix{flex:1;margin:8px 0}
+        .api-key-copy-status{min-height:20px;color:#13804b;font-size:12px}
+        .api-copy-button{min-height:34px!important;padding:7px 10px!important;border:1px solid #d5deea!important;background:#fff!important;color:#245ca6!important;font-size:11px!important}
+        .api-copy-button:hover{border-color:#b9cee8!important;background:#f6f9fd!important}
+        .api-endpoint-link{justify-content:space-between}
+        .api-endpoint-link code{flex:1}
+        .api-success-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:#10243f99;backdrop-filter:blur(5px)}
+        .api-success-modal{position:relative;width:min(560px,100%);max-height:min(90vh,780px);overflow:auto;padding:28px;border:1px solid #e8edf5;border-radius:22px;background:#fff;box-shadow:0 24px 80px #10243f40}
+        .api-success-icon{display:grid;width:58px;height:58px;place-items:center;margin-bottom:16px;border-radius:18px;background:#e9f8ef;color:#13804b;font-size:30px}
+        .api-success-modal h2{margin:0;color:#17365b;font-size:23px}
+        .api-success-modal>p{margin:8px 0 18px;color:#66758b;font-size:13px;line-height:1.7}
+        .api-success-label{display:block;margin:14px 0 6px;color:#475467;font-size:12px;font-weight:800}
+        .api-success-key{display:block;overflow-wrap:anywhere;padding:13px;border:1px solid #dce5f0;border-radius:10px;background:#f8fafc;color:#17365b;direction:ltr;text-align:left;font-size:12px}
+        .api-success-url{display:flex;align-items:center;gap:9px}
+        .api-success-key-row{display:flex;align-items:stretch;gap:9px}
+        .api-success-key-row .api-success-key{min-width:0;flex:1}
+        .api-success-url code{min-width:0;flex:1;overflow-wrap:anywhere;padding:11px;border:1px solid #e7edf5;border-radius:9px;background:#f8fafc;direction:ltr;text-align:left}
+        .api-success-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+        .api-success-actions .secondary{border:1px solid #dce4ee;background:#fff;color:#344054}
+        .api-success-note{margin-top:14px!important;color:#8a5b08!important;font-size:11px!important}
+        .api-success-close{position:absolute;top:15px;inset-inline-end:15px;display:grid;width:36px;height:36px;place-items:center;border:1px solid #e7edf5;border-radius:10px;background:#fff;color:#66758b;font-size:20px;cursor:pointer}
+        .api-copy-toast{position:fixed;right:24px;bottom:24px;z-index:1100;padding:12px 18px;border:1px solid #b7ebc9;border-radius:12px;background:#ecfdf3;color:#067647;font-size:13px;font-weight:750;box-shadow:0 10px 28px #142c4b20}
+        .api-copy-toast[hidden]{display:none}
+        .api-expiry-form{display:grid;grid-template-columns:minmax(150px,1fr) auto;align-items:end;gap:9px;margin:0}
+        .api-expiry-form label{display:grid;gap:6px;color:#66758b;font-size:11px;font-weight:750}
+        .api-expiry-form input{min-width:0;height:39px;padding:8px 10px;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:#24364e;font:inherit;font-size:12px}
+        .api-actions{display:flex;flex-wrap:wrap;gap:8px}
+        .api-actions form{margin:0}
+        .api-endpoints-section{display:grid;gap:9px;padding-top:14px;border-top:1px solid #edf1f6}
+        .api-endpoints-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#344054;font-size:12px;font-weight:850}
+        .api-endpoint-list{display:grid;gap:7px}
+        .api-endpoint-link{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e7edf5;border-radius:8px;background:#fff;color:#245ca6;text-decoration:none}
+        .api-endpoint-link:hover{border-color:#b9cee8;background:#f6f9fd}
+        .api-endpoint-link strong{color:#66758b;font-size:10px}
+        .api-endpoint-link code{overflow-wrap:anywhere;font-size:11px}
+        @media(max-width:520px){.api-company-content{padding:14px}.api-company-head{padding:14px}.api-company-key-row{flex-direction:column}.api-company-key-row .api-copy-button{width:100%}.api-expiry-form{grid-template-columns:1fr}.api-expiry-form button{width:100%}}
+        .api-docs{margin-top:20px}
+        .api-docs code{direction:ltr}
+        .api-endpoints{display:flex;flex-wrap:wrap;gap:8px}
+        .api-endpoints code{padding:7px 9px;border-radius:7px;background:#f2f5f9;color:#344054}
         .tenant-table-wrap{overflow:auto;border:1px solid #e9eef5;border-radius:12px}
         .tenant-table{width:100%;border-collapse:collapse}
         .tenant-table th,.tenant-table td{padding:12px;text-align:start;border-bottom:1px solid #edf1f6;vertical-align:middle}
@@ -114,8 +175,8 @@
     <header class="tenant-header">
         <div class="tenant-header-copy">
             <div class="tenant-eyebrow">{{ __('إدارة المنصة') }}</div>
-            <h1>{{ __(['dashboard' => 'مرحباً بك في لوحة سوبر فايزر', 'companies' => 'إدارة الشركات', 'create-company' => 'إضافة شركة جديدة', 'create-user' => 'إضافة مستخدم لشركة', 'users' => 'إدارة المستخدمين'][$page] ?? 'لوحة سوبر فايزر') }}</h1>
-            <p>{{ __(['dashboard' => 'نظرة عامة على الشركات والمستخدمين وحالة الحسابات.', 'companies' => 'عرض بيانات الشركات وتحديثها وإدارة حالتها.', 'create-company' => 'أضف شركة جديدة إلى المنصة.', 'create-user' => 'أنشئ حساباً واربطه بإحدى الشركات النشطة.', 'users' => 'عرض حسابات المستخدمين وتعديل بياناتها وحالتها.'][$page] ?? '') }}</p>
+            <h1>{{ __(['dashboard' => 'مرحباً بك في لوحة سوبر فايزر', 'companies' => 'إدارة الشركات', 'company-apis' => 'واجهات API الشركات', 'create-company' => 'إضافة شركة جديدة', 'create-user' => 'إضافة مستخدم لشركة', 'users' => 'إدارة المستخدمين'][$page] ?? 'لوحة سوبر فايزر') }}</h1>
+            <p>{{ __(['dashboard' => 'نظرة عامة على الشركات والمستخدمين وحالة الحسابات.', 'companies' => 'عرض بيانات الشركات وتحديثها وإدارة حالتها.', 'company-apis' => 'إدارة مفتاح API الخاص بكل شركة واستعراض واجهات الموقع المتاحة.', 'create-company' => 'أضف شركة جديدة إلى المنصة.', 'create-user' => 'أنشئ حساباً واربطه بإحدى الشركات النشطة.', 'users' => 'عرض حسابات المستخدمين وتعديل بياناتها وحالتها.'][$page] ?? '') }}</p>
         </div>
         <div class="tenant-header-actions">
             @if($page === 'dashboard' || $page === 'companies')
@@ -260,7 +321,20 @@
             <div><h2>إدارة الشركات</h2><p>{{ $tenants->count() }} شركة مسجلة · يمكنك تعديل بيانات الشركة أو تغيير حالتها</p></div>
             <a class="tenant-card-link" href="{{ route('superadmin.tenants.create') }}">إضافة شركة جديدة ↑</a>
         </div>
-        @if($tenants->isEmpty())
+            @if(session('generated_api_key'))
+                <div class="tenant-card" role="status">
+                    <h3>مفتاح API الجديد — انسخه الآن، لن يظهر مرة أخرى</h3>
+                    <code dir="ltr">{{ session('generated_api_key') }}</code>
+                    <p>احتفظ به في الخادم الخاص بالموقع فقط، ولا تضعه في JavaScript أو صفحات المتصفح.</p>
+                </div>
+            @endif
+            <div class="tenant-card">
+                <h3>واجهات مواقع الشركات</h3>
+                <p>أرسل المفتاح في ترويسة <code dir="ltr">Authorization: Bearer YOUR_API_KEY</code>.</p>
+                <p dir="ltr"><code>GET /api/v1/trips</code> · <code>GET /api/v1/trips/{id}</code> · <code>GET /api/v1/companies</code> · <code>GET /api/v1/currencies</code> · <code>POST /api/v1/bookings</code></p>
+                <p>إرسال الحجز ينشئ عملية معلّقة باستخدام الأسعار المسجلة داخل النظام؛ لا تُرسل سعرًا من الموقع.</p>
+            </div>
+            @if($tenants->isEmpty())
             <div class="empty-note">لا توجد شركات حتى الآن. ابدأ بإضافة شركة جديدة.</div>
         @endif
         <div class="company-list">
@@ -280,8 +354,133 @@
                 <label>الحالة<select name="status"><option value="1" @selected($tenant->status)>مفعلة</option><option value="0" @selected(!$tenant->status)>موقوفة</option></select></label>
                 <div class="company-save"><span class="company-users-count">{{ $tenant->users_count }} مستخدم مرتبط بهذه الشركة</span><button type="submit">حفظ التعديلات</button></div>
             </form>
+            <div class="company-form">
+                <span>{{ $tenant->api_key_prefix ? 'API مفعّل — '.$tenant->api_key_prefix.'…' : 'لا يوجد مفتاح API' }}</span>
+                <form method="post" action="{{ route('superadmin.tenants.api-key.generate', $tenant) }}" onsubmit="return confirm('{{ $tenant->api_key_prefix ? 'سيؤدي إنشاء مفتاح جديد إلى إيقاف المفتاح الحالي. متابعة؟' : 'إنشاء مفتاح API لهذه الشركة؟' }}')">
+                    @csrf
+                    <button type="submit">{{ $tenant->api_key_prefix ? 'تجديد مفتاح API' : 'إنشاء مفتاح API' }}</button>
+                </form>
+                @if($tenant->api_key_prefix)
+                    <form method="post" action="{{ route('superadmin.tenants.api-key.revoke', $tenant) }}" onsubmit="return confirm('إلغاء مفتاح API سيوقف اتصال الموقع فوراً. متابعة؟')">
+                        @csrf
+                        @method('delete')
+                        <button type="submit">إلغاء المفتاح</button>
+                    </form>
+                @endif
+            </div>
             </div>
         @endforeach
+        </div>
+    </section>
+    @endif
+
+    @if($page === 'company-apis')
+    @if(session('generated_api_key'))
+        <div class="api-success-overlay" id="api-success-overlay">
+            <section class="api-success-modal" role="dialog" aria-modal="true" aria-labelledby="api-success-title">
+                <button class="api-success-close" type="button" data-close-api-success aria-label="إغلاق">×</button>
+                <div class="api-success-icon" aria-hidden="true">✓</div>
+                <h2 id="api-success-title">مبروك! تم إنشاء API بنجاح</h2>
+                <p>تم تفعيل API لشركة <strong>{{ session('generated_api_company') }}</strong>. انسخ المفتاح الآن واحفظه في مكان آمن.</p>
+                <span class="api-success-label">مفتاح API</span>
+                <div class="api-success-key-row">
+                    <code class="api-success-key" id="generated-api-key">{{ session('generated_api_key') }}</code>
+                    <button type="button" class="api-copy-button" data-copy-text="{{ session('generated_api_key') }}" data-copy-message="key">نسخ المفتاح</button>
+                </div>
+                <span class="api-success-label">رابط API الأساسي</span>
+                <div class="api-success-url">
+                    <code id="generated-api-url" dir="ltr">{{ url('/api/v1') }}</code>
+                    <button type="button" class="api-copy-button" data-copy-text="{{ url('/api/v1') }}" data-copy-message="base-url">نسخ الرابط</button>
+                </div>
+                <p class="api-success-note">المفتاح الكامل يظهر مرة واحدة فقط. أرسله في ترويسة Authorization بصيغة Bearer، ولا تضعه في كود المتصفح.</p>
+            </section>
+        </div>
+    @endif
+    <div class="api-copy-toast" id="api-copy-toast" role="status" aria-live="polite" hidden></div>
+    <section class="tenant-card">
+        <div class="tenant-card-heading">
+            <div><h2>مفاتيح API حسب الشركة</h2><p>{{ $tenants->count() }} شركة — لكل شركة مفتاح مستقل وبياناتها معزولة عن بقية الشركات.</p></div>
+        </div>
+        @if($tenants->isEmpty())
+            <div class="empty-note">لا توجد شركات حتى الآن.</div>
+        @else
+            <div class="api-company-list">
+                @foreach($tenants as $tenant)
+                    <article class="api-company-card">
+                        <div class="api-company-head">
+                            <div class="api-company-identity">
+                                <span class="api-company-avatar" aria-hidden="true">API</span>
+                                <strong>{{ $tenant->name }}</strong>
+                            </div>
+                            <span class="tenant-status {{ $tenant->status ? 'active' : 'suspended' }}">{{ $tenant->status ? 'نشطة' : 'موقوفة' }}</span>
+                        </div>
+                        <div class="api-company-content">
+                            <p class="api-company-state">
+                                <span class="api-key-status {{ $tenant->api_key_status_class }}">{{ $tenant->api_key_status }}</span>
+                                <span>{{ $tenant->api_key_expiry_label }}</span>
+                            </p>
+                            <div class="api-company-keybox">
+                                <div class="api-company-key-label">
+                                    <span>مفتاح API</span>
+                                    <span>{{ $tenant->api_key_value ? 'مشفّر ومحفوظ بأمان' : 'غير متاح' }}</span>
+                                </div>
+                                <div class="api-company-key-row">
+                                    <code class="api-company-key-value">{{ $tenant->api_key_display }}</code>
+                                    @if($tenant->api_key_value)
+                                        <button type="button" class="api-copy-button" data-copy-text="{{ $tenant->api_key_value }}" data-copy-message="key">
+                                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.8"/></svg>
+                                            نسخ المفتاح
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+                            <form class="api-expiry-form" method="post" action="{{ route('superadmin.tenants.api-key.generate', $tenant) }}" onsubmit="return confirm('{{ $tenant->api_key_prefix ? 'إنشاء مفتاح جديد سيوقف المفتاح الحالي. متابعة؟' : 'إنشاء مفتاح API لهذه الشركة؟' }}')">
+                                @csrf
+                                <label>تاريخ انتهاء الصلاحية
+                                    <input type="date" name="expires_at" min="{{ today()->toDateString() }}" value="{{ $tenant->api_key_expires_at?->format('Y-m-d') ?? today()->addYear()->toDateString() }}" required>
+                                </label>
+                                <button type="submit">{{ $tenant->api_key_prefix ? 'تجديد وتحديد الصلاحية' : 'إنشاء API' }}</button>
+                            </form>
+                            @if($tenant->api_key_prefix)
+                                <div class="api-endpoints-section">
+                                    <div class="api-endpoints-heading"><span>روابط الـ API المتاحة</span><span>{{ count($apiEndpoints) }} واجهات</span></div>
+                                    <div class="api-endpoint-list" aria-label="روابط واجهات API الخاصة بالشركة">
+                                        @foreach($apiEndpoints as $endpoint)
+                                            <div class="api-endpoint-link">
+                                                <strong>{{ $endpoint['method'] }} · {{ $endpoint['label'] }}</strong>
+                                                <code dir="ltr">{{ url('/api/v1'.$endpoint['path']) }}</code>
+                                                <button type="button" class="api-copy-button" data-copy-text="{{ url('/api/v1'.str_replace('{id}', '1', $endpoint['path'])) }}" data-copy-message="endpoint">نسخ</button>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="api-actions">
+                                @if($tenant->api_key_prefix)
+                                    <form method="post" action="{{ route('superadmin.tenants.api-key.revoke', $tenant) }}" onsubmit="return confirm('إلغاء مفتاح API سيوقف اتصال الموقع فوراً. متابعة؟')">
+                                    @csrf
+                                    @method('delete')
+                                    <button type="submit">إلغاء المفتاح</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+        <div class="api-docs">
+            <h3>واجهات الموقع</h3>
+            <p>أرسل مفتاح الشركة في ترويسة الطلب: <code dir="ltr">Authorization: Bearer YOUR_API_KEY</code></p>
+            <p>عنوان API الأساسي: <code dir="ltr">{{ url('/api/v1') }}</code></p>
+            <div class="api-endpoints" dir="ltr">
+                <code>GET /trips</code>
+                <code>GET /trips/{id}</code>
+                <code>GET /companies</code>
+                <code>GET /currencies</code>
+                <code>POST /bookings</code>
+            </div>
+            <p>إنشاء الحجز يستخدم الأسعار المسجلة في النظام؛ لا ترسل السعر من الموقع. كل مفتاح يصل لبيانات شركته فقط.</p>
         </div>
     </section>
     @endif
@@ -355,4 +554,68 @@
     </section>
     @endif
 </main>
+@endsection
+
+@section('scripts')
+    <script>
+        (() => {
+            const toast = document.getElementById('api-copy-toast');
+            let toastTimer;
+            const successMessages = {
+                key: @json(__('تم نسخ المفتاح. احفظه في مكان آمن.')),
+                'base-url': @json(__('تم نسخ رابط API الأساسي.')),
+                endpoint: @json(__('تم نسخ رابط الواجهة بنجاح.'))
+            };
+
+            const copyText = async text => {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return;
+                }
+
+                const input = document.createElement('textarea');
+                input.value = text;
+                input.setAttribute('readonly', '');
+                input.style.position = 'fixed';
+                input.style.opacity = '0';
+                document.body.append(input);
+                input.select();
+                const copied = document.execCommand('copy');
+                input.remove();
+                if (!copied) throw new Error('Clipboard copy was denied.');
+            };
+
+            document.querySelectorAll('[data-copy-text]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    try {
+                        await copyText(button.dataset.copyText);
+                        if (toast) {
+                            toast.textContent = successMessages[button.dataset.copyMessage] || @json(__('تم النسخ بنجاح.'));
+                            toast.hidden = false;
+                            window.clearTimeout(toastTimer);
+                            toastTimer = window.setTimeout(() => { toast.hidden = true; }, 2800);
+                        }
+                    } catch {
+                        if (toast) {
+                            toast.textContent = 'تعذر النسخ تلقائيًا. حدد النص وانسخه يدويًا.';
+                            toast.hidden = false;
+                        }
+                    }
+                });
+            });
+
+            const overlay = document.getElementById('api-success-overlay');
+            const closeButton = document.querySelector('[data-close-api-success]');
+            const closeModal = () => {
+                if (overlay) overlay.remove();
+            };
+            closeButton?.addEventListener('click', closeModal);
+            overlay?.addEventListener('click', event => {
+                if (event.target === overlay) closeModal();
+            });
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') closeModal();
+            });
+        })();
+    </script>
 @endsection

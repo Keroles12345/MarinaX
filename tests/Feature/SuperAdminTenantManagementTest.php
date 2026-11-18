@@ -22,6 +22,10 @@ class SuperAdminTenantManagementTest extends TestCase
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
             $table->boolean('status')->default(true);
+            $table->string('api_key_prefix', 24)->nullable();
+            $table->string('api_key_hash', 64)->nullable();
+            $table->text('api_key_encrypted')->nullable();
+            $table->date('api_key_expires_at')->nullable();
             $table->timestamps();
         });
         Schema::create('users', function (Blueprint $table) {
@@ -386,6 +390,74 @@ class SuperAdminTenantManagementTest extends TestCase
             ->assertSee('ملخص المنصة')
             ->assertDontSee('إنشاء المستخدم النشط')
             ->assertDontSee('حفظ التعديلات');
+    }
+
+    public function test_super_admin_can_generate_and_revoke_a_company_api_key(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'Company API', 'status' => true]);
+        $superAdmin = User::withoutGlobalScopes()->create([
+            'name' => 'Platform Admin',
+            'username' => 'api-platform-admin',
+            'email' => 'api-platform@example.test',
+            'password' => Hash::make('StrongPass123'),
+            'role' => 'admin',
+            'status' => true,
+            'is_super_admin' => true,
+        ]);
+
+        $response = $this->actingAs($superAdmin, 'superadmin')
+            ->post(route('superadmin.tenants.api-key.generate', $tenant), ['expires_at' => today()->addMonth()->toDateString()])
+            ->assertRedirect(route('superadmin.tenants.apis'))
+            ->assertSessionHas('generated_api_key');
+
+        $key = $response->getSession()->get('generated_api_key');
+        $this->assertStringStartsWith('mx_live_', $key);
+        $this->assertDatabaseHas('tenants', [
+            'id' => $tenant->id,
+            'api_key_prefix' => substr($key, 0, 24),
+            'api_key_hash' => hash('sha256', $key),
+            'api_key_expires_at' => today()->addMonth()->startOfDay()->toDateTimeString(),
+        ]);
+        $encryptedKey = \Illuminate\Support\Facades\DB::table('tenants')
+            ->where('id', $tenant->id)
+            ->value('api_key_encrypted');
+        $this->assertNotEmpty($encryptedKey);
+        $this->assertSame($key, \Illuminate\Support\Facades\Crypt::decryptString($encryptedKey));
+
+        $this->get(route('superadmin.tenants.apis'))
+            ->assertOk()
+            ->assertSee('واجهات API الشركات')
+            ->assertSee('Company API')
+            ->assertSee(substr($key, 0, 24))
+            ->assertSee('GET /trips')
+            ->assertSee('api-success-overlay', false)
+            ->assertSee('مبروك! تم إنشاء API بنجاح')
+            ->assertSee('تاريخ انتهاء الصلاحية')
+            ->assertSee(today()->addMonth()->toDateString())
+            ->assertSee('/api/v1/trips')
+            ->assertSee('class="api-company-key-value"', false)
+            ->assertSee('class="api-copy-button" data-copy-text="'.$key.'" data-copy-message="key"', false)
+            ->assertSee('data-copy-text="'.$key.'"', false)
+            ->assertSee('class="api-copy-button" data-copy-text="'.$key.'" data-copy-message="key"', false)
+            ->assertSee('data-copy-message="endpoint"', false)
+            ->assertSee('نسخ الرابط')
+            ->assertSee('Authorization: Bearer YOUR_API_KEY')
+            ->assertSee('navigator.clipboard.writeText', false)
+            ->assertSee($key);
+        $this->get(route('superadmin.tenants.apis'))
+            ->assertOk()
+            ->assertSee($key)
+            ->assertSee('class="api-copy-button" data-copy-text="'.$key.'" data-copy-message="key"', false);
+
+        $this->delete(route('superadmin.tenants.api-key.revoke', $tenant))
+            ->assertRedirect(route('superadmin.tenants.apis'));
+        $this->assertDatabaseHas('tenants', [
+            'id' => $tenant->id,
+            'api_key_prefix' => null,
+            'api_key_hash' => null,
+            'api_key_encrypted' => null,
+            'api_key_expires_at' => null,
+        ]);
     }
 
     public function test_super_admin_has_a_separate_login_and_rejects_company_admins(): void

@@ -19,11 +19,17 @@ class Trips extends Model
         'time_trip',
         'description',
         'status',
+        'includes',
+        'excludes',
+        'faqs',
     ];
 
     protected $casts = [
         'status' => 'boolean',
         'time_trip' => 'datetime:H:i',
+        'includes' => 'array',
+        'excludes' => 'array',
+        'faqs' => 'array',
     ];
 
     public function tripHotels(): HasMany
@@ -34,5 +40,10 @@ class Trips extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class);
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(TripImage::class, 'trip_id')->orderBy('sort_order');
     }
 }

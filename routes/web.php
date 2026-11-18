@@ -41,6 +41,7 @@ Route::get('/dashboard', [StaffAuthController::class, 'showLogin'])
     Route::prefix('superadmin')->name('superadmin.')->middleware('superadmin')->group(function () {
         Route::get('/dashboard', [TenantController::class, 'dashboard'])->name('dashboard');
         Route::get('/companies', [TenantController::class, 'index'])->name('tenants.index');
+        Route::get('/company-apis', [TenantController::class, 'apisIndex'])->name('tenants.apis');
         Route::get('/companies/create', [TenantController::class, 'createTenantPage'])->name('tenants.create');
         Route::get('/users', [TenantController::class, 'usersIndex'])->name('users.index');
         Route::get('/users/create', [TenantController::class, 'createUserPage'])->name('users.create');
@@ -49,6 +50,8 @@ Route::get('/dashboard', [StaffAuthController::class, 'showLogin'])
         Route::post('/logout', [TenantController::class, 'logout'])->name('logout');
         Route::post('/companies', [TenantController::class, 'store'])->name('tenants.store');
         Route::put('/companies/{tenant}', [TenantController::class, 'update'])->name('tenants.update');
+        Route::post('/companies/{tenant}/api-key', [TenantController::class, 'generateApiKey'])->name('tenants.api-key.generate');
+        Route::delete('/companies/{tenant}/api-key', [TenantController::class, 'revokeApiKey'])->name('tenants.api-key.revoke');
         Route::post('/users', [TenantController::class, 'createUser'])->name('users.store');
         Route::put('/users/{userId}/company', [TenantController::class, 'assignUser'])->name('users.assign-company');
         Route::put('/users/{userId}', [TenantController::class, 'updateUser'])->name('users.update');
