@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AccountChartService;
+use App\Support\SystemPermissions;
 use App\Support\TenantApiScopes;
 use App\Support\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -78,32 +79,87 @@ class TenantController extends Controller
             ->withCount(['users' => fn ($query) => $query->withoutGlobalScopes()])
             ->orderBy('name')
             ->get();
-        $profitTotals = DB::table('tenants as t')
-            ->leftJoin('accounts as a', 'a.tenant_id', '=', 't.id')
-            ->leftJoin('journal_lines as jl', function ($join): void {
-                $join->on('jl.account_id', '=', 'a.id')
-                    ->on('jl.tenant_id', '=', 't.id');
-            })
-            ->leftJoin('journal_entries as je', function ($join): void {
-                $join->on('je.id', '=', 'jl.entry_id')
-                    ->on('je.tenant_id', '=', 't.id')
-                    ->where('je.status', 'posted');
-            })
-            ->select('t.id')
-            ->selectRaw(
-                "COALESCE(SUM(CASE WHEN je.id IS NOT NULL AND a.type = 'إيرادات' THEN jl.credit - jl.debit ELSE 0 END), 0) as revenue_total"
-            )
-            ->selectRaw(
-                "COALESCE(SUM(CASE WHEN je.id IS NOT NULL AND a.type = 'مصروفات' THEN jl.debit - jl.credit ELSE 0 END), 0) as expense_total"
-            )
-            ->groupBy('t.id')
-            ->get()
-            ->keyBy('id');
-        $tenants->each(function (Tenant $tenant) use ($profitTotals): void {
-            $totals = $profitTotals->get($tenant->id);
-            $tenant->revenue_total = round((float) ($totals?->revenue_total ?? 0), 2);
-            $tenant->expense_total = round((float) ($totals?->expense_total ?? 0), 2);
-            $tenant->net_profit = round($tenant->revenue_total - $tenant->expense_total, 2);
+        $companyAdmins = User::withoutGlobalScopes()
+            ->where('role', 'admin')
+            ->where('is_super_admin', false)
+            ->with(['permissions' => fn ($query) => $query->where('guard_name', 'web')])
+            ->get(['id', 'tenant_id', 'system_permissions_managed'])
+            ->groupBy('tenant_id');
+        $tenants->each(function (Tenant $tenant) use ($companyAdmins): void {
+            $admins = $companyAdmins->get($tenant->id, collect());
+            $adminCount = $admins->count();
+            $managedAdminCount = $admins->where('system_permissions_managed', true)->count();
+            $hasFullPermissions = $adminCount > $managedAdminCount;
+            $permissionNames = [];
+
+            if ($hasFullPermissions) {
+                $permissionNames = SystemPermissions::names();
+            } else {
+                foreach ($admins as $admin) {
+                    foreach ($admin->permissions as $permission) {
+                        $permissionNames[] = $permission->name;
+                    }
+                }
+                $permissionNames = array_values(array_intersect(
+                    array_unique($permissionNames),
+                    SystemPermissions::names()
+                ));
+            }
+
+            $actionsByModule = [];
+            foreach ($permissionNames as $permissionName) {
+                if (! str_starts_with($permissionName, 'system.')) {
+                    continue;
+                }
+
+                $parts = explode('.', $permissionName);
+                if (count($parts) !== 3) {
+                    continue;
+                }
+
+                [, $module, $action] = $parts;
+                if (! isset(SystemPermissions::MODULES[$module])
+                    || ! in_array($action, SystemPermissions::MODULES[$module]['actions'], true)
+                    || ! isset(SystemPermissions::ACTIONS[$action])) {
+                    continue;
+                }
+
+                $actionsByModule[$module][$action] = true;
+            }
+
+            $permissionModules = [];
+            foreach (SystemPermissions::MODULES as $module => $definition) {
+                $actions = array_values(array_filter(
+                    $definition['actions'],
+                    fn (string $action): bool => isset($actionsByModule[$module][$action])
+                        && isset(SystemPermissions::ACTIONS[$action])
+                ));
+                if ($actions === []) {
+                    continue;
+                }
+
+                $permissionModules[] = [
+                    'module' => $module,
+                    'label' => $definition['label'],
+                    'actions' => array_map(
+                        fn (string $action): string => SystemPermissions::ACTIONS[$action],
+                        $actions
+                    ),
+                ];
+            }
+
+            $tenant->setAttribute('admin_count', $adminCount);
+            $tenant->setAttribute('managed_admin_count', $managedAdminCount);
+            $tenant->setAttribute(
+                'permission_mode',
+                $hasFullPermissions ? 'full' : ($adminCount > 0 ? 'managed' : 'none')
+            );
+            $tenant->setAttribute(
+                'permission_count',
+                count($permissionNames)
+            );
+            $tenant->setAttribute('permission_modules', $permissionModules);
+            $tenant->setAttribute('has_full_permissions', $hasFullPermissions);
         });
         $usersQuery = User::withoutGlobalScopes()
             ->where('is_super_admin', false);

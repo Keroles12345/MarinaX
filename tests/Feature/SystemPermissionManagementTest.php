@@ -51,6 +51,52 @@ class SystemPermissionManagementTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_super_admin_dashboard_shows_managed_company_permissions(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'شركة الصلاحيات', 'status' => true]);
+        $companyAdmin = User::withoutGlobalScopes()->create([
+            'name' => 'مدير الشركة',
+            'email' => 'company-admin@example.test',
+            'password' => 'password',
+            'role' => 'admin',
+            'status' => true,
+            'tenant_id' => $tenant->id,
+            'system_permissions_managed' => true,
+        ]);
+        $superAdmin = User::withoutGlobalScopes()->create([
+            'name' => 'Super Admin',
+            'email' => 'superadmin@example.test',
+            'password' => 'password',
+            'role' => 'admin',
+            'status' => true,
+            'is_super_admin' => true,
+        ]);
+        $companyAdmin->givePermissionTo([
+            Permission::findOrCreate(SystemPermissions::name('admin_dashboard', 'view'), 'web'),
+            Permission::findOrCreate(SystemPermissions::name('accounts', 'view'), 'web'),
+        ]);
+
+        $this->actingAs($superAdmin, 'superadmin')
+            ->get(route('superadmin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('tenants', function ($tenants) use ($tenant): bool {
+                $company = $tenants->firstWhere('id', $tenant->id);
+
+                return $company !== null
+                    && $company->permission_mode === 'managed'
+                    && $company->permission_count === 2
+                    && collect($company->permission_modules)->pluck('label')->all()
+                        === ['لوحة الإدارة', 'دليل الحسابات'];
+            })
+            ->assertSee('صلاحيات المستخدمين')
+            ->assertSee('الوحدات والإجراءات المصرح بها')
+            ->assertSee('شركة الصلاحيات')
+            ->assertSee('لوحة الإدارة')
+            ->assertSee('دليل الحسابات')
+            ->assertSee('محددة')
+            ->assertSee('2 الصلاحيات');
+    }
+
     public function test_super_admin_can_assign_exact_system_permissions_to_a_user_in_a_company(): void
     {
         $tenant = Tenant::query()->create(['name' => 'شركة الاختبار', 'status' => true]);

@@ -40,27 +40,37 @@
         .recent-user-name{overflow:hidden;color:#263a58;font-size:13px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
         .recent-user-email{display:block;overflow:hidden;margin-top:3px;color:#8a96a7;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
         .recent-user-company{max-width:145px;overflow:hidden;color:#66758b;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
-        .profit-chart{display:grid;gap:11px;padding:2px 3px}
-        .profit-chart-legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:15px;color:#66758b;font-size:12px}
-        .profit-chart-legend span{display:inline-flex;align-items:center;gap:7px}
-        .profit-chart-legend i{width:10px;height:10px;border-radius:3px;background:#3985ce}
-        .profit-chart-legend .expense-key{background:#e5a33b}
-        .profit-chart-item{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(300px,2fr) minmax(125px,.55fr);align-items:center;gap:20px;padding:15px 16px;border:1px solid #edf1f6;border-radius:12px;background:#fcfdff}
-        .profit-chart-company{min-width:0}
-        .profit-chart-name{display:block;overflow:hidden;color:#263a58;font-size:14px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
-        .profit-chart-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;color:#8490a2;font-size:11px}
-        .profit-chart-bars{display:grid;gap:9px}
-        .profit-chart-bar-row{display:grid;grid-template-columns:68px minmax(80px,1fr) minmax(72px,auto);align-items:center;gap:10px;color:#738197;font-size:11px}
-        .profit-chart-track{height:10px;overflow:hidden;border-radius:99px;background:#edf1f6}
-        .profit-chart-bar{height:100%;min-width:2px;border-radius:inherit;background:linear-gradient(90deg,#3985ce,#75b4ed)}
-        .profit-chart-bar.expense{background:linear-gradient(90deg,#e5a33b,#f2c46b)}
-        .profit-chart-bar.negative{background:linear-gradient(90deg,#e36c61,#f3a198)}
-        .profit-chart-amount{color:#45546a;text-align:left;direction:ltr;font-size:11px;font-weight:700}
-        .profit-chart-net{padding-inline-start:15px;border-inline-start:1px solid #e8edf3}
-        .profit-chart-net small{display:block;margin-bottom:5px;color:#8490a2;font-size:10px}
-        .profit-chart-net strong{font-size:15px;direction:ltr}
-        .profit-chart-net.positive strong{color:#13804b}
-        .profit-chart-net.negative strong{color:#b42318}
+        .company-permissions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:13px}
+        .company-permissions-item{min-width:0;overflow:hidden;border:1px solid #e7edf5;border-radius:14px;background:linear-gradient(145deg,#fff,#fbfcfe)}
+        .company-permissions-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 16px 13px;border-bottom:1px solid #edf1f6}
+        .company-permissions-identity{min-width:0}
+        .company-permissions-name{display:block;overflow:hidden;color:#223a5e;font-size:14px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+        .company-permissions-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:8px;color:#718096;font-size:11px}
+        .company-permissions-count{display:inline-flex;align-items:center;min-height:24px;padding:4px 8px;border:1px solid #edf1f6;border-radius:7px;background:#fbfcfe}
+        .permission-mode{display:inline-flex;flex:0 0 auto;align-items:center;min-height:25px;padding:4px 9px;border:1px solid #dce8f5;border-radius:99px;background:#edf4fc;color:#245ca6;font-size:10px;font-weight:800}
+        .permission-mode.managed{border-color:#f5e5c4;background:#fff8e8;color:#9a6700}
+        .permission-mode.none{border-color:#e7edf5;background:#f8fafc;color:#718096}
+        .company-permissions-summary{padding:13px 16px 15px}
+        .company-permissions-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;color:#66758b;font-size:11px}
+        .company-permissions-summary-head strong{color:#1b3558;font-size:12px}
+        .permission-modules{display:grid;gap:8px}
+        .permission-module{padding:9px 10px;border:1px solid #edf1f6;border-radius:9px;background:#fff}
+        .permission-module-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+        .permission-module-head strong{min-width:0;overflow:hidden;color:#344054;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+        .permission-module-key{flex:0 0 auto;color:#98a2b3;font-size:10px;direction:ltr}
+        .permission-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+        .permission-action{display:inline-flex;align-items:center;padding:3px 7px;border-radius:6px;background:#f1f6fc;color:#526b88;font-size:10px}
+        .permission-preview{display:flex;flex-wrap:wrap;gap:7px}
+        .permission-chip{display:inline-flex;max-width:100%;align-items:center;gap:6px;padding:6px 9px;border:1px solid #e3ebf5;border-radius:8px;background:#fff;color:#526b88;font-size:10px;line-height:1.35}
+        .permission-chip strong{overflow:hidden;max-width:150px;color:#344054;text-overflow:ellipsis;white-space:nowrap}
+        .permission-chip span{color:#245ca6;font-weight:800}
+        .permission-extra[hidden]{display:none}
+        .permission-show-more{display:inline-flex;align-items:center;justify-content:center;min-height:32px;margin-top:9px;padding:6px 10px;border:1px solid #d7e3f2;border-radius:8px;background:#f8fbff;color:#245ca6;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+        .permission-show-more:hover{border-color:#a9c3df;background:#eef5ff}
+        .permission-modules[hidden]{display:none}
+        .permission-toggle{display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:8px 12px!important;border:1px solid #dce8f5!important;border-radius:8px!important;background:#f6f9fd!important;color:#245ca6!important;font-size:11px!important;font-weight:800!important}
+        .permission-toggle:hover{border-color:#b9cee8!important;background:#edf5ff!important;transform:translateY(-1px)}
+        .permission-empty{padding:13px 8px;border:1px dashed #dce4ee;border-radius:9px;color:#8793a4;font-size:11px;text-align:center}
         .empty-note{padding:20px 10px;color:#8793a4;font-size:13px;text-align:center}
         .tenant-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
         .tenant-grid label,.tenant-field{display:grid;gap:6px;color:#45546a;font-size:13px;font-weight:650}
@@ -197,8 +207,6 @@
         .tenant-table th{background:#f8fafc;color:#718096;font-size:11px;font-weight:800;white-space:nowrap}
         .tenant-table td{color:#35465f;font-size:12px}
         .tenant-table tbody tr:last-child td{border-bottom:0}
-        .profit-positive{color:#13804b!important;font-weight:800}
-        .profit-negative{color:#b42318!important;font-weight:800}
         .user-primary{color:#203754;font-size:13px;font-weight:750}
         .user-secondary{display:block;margin-top:3px;color:#8995a6;font-size:11px}
         .user-edit summary{color:#245ca6;font-size:12px;font-weight:750;cursor:pointer;white-space:nowrap}
@@ -214,8 +222,8 @@
         .tenant-success{padding:13px 16px;background:#ecfdf3;color:#067647;border:1px solid #b7ebc9;border-radius:10px;margin:16px 0}
         .tenant-error{padding:11px 14px;background:#fff1f0;color:#b42318;border:1px solid #fee4e2;border-radius:10px;margin:12px 0;font-size:13px}
         @media(max-width:1150px){.tenant-stats{grid-template-columns:repeat(4,minmax(130px,1fr))}.company-form{grid-template-columns:repeat(3,minmax(140px,1fr))}}
-        @media(max-width:850px){.tenant-header{align-items:flex-start;padding:26px}.tenant-header-actions{justify-content:flex-start}.tenant-stats{grid-template-columns:repeat(3,minmax(120px,1fr))}.profit-chart-item{grid-template-columns:minmax(140px,.7fr) minmax(240px,1.6fr) minmax(115px,.5fr);gap:13px}}
-        @media(max-width:600px){.tenant-header{display:grid;gap:20px;padding:21px;border-radius:17px}.tenant-header p{font-size:13px}.tenant-header-actions a{flex:1}.tenant-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.tenant-stat{min-height:102px;padding:14px}.tenant-stat strong{font-size:25px}.tenant-card{padding:16px}.tenant-overview{gap:11px}.recent-user{grid-template-columns:minmax(0,1fr) auto;gap:8px}.recent-user-company{display:none}.profit-chart-item{grid-template-columns:minmax(0,1fr) auto;gap:12px}.profit-chart-bars{grid-column:1/-1;grid-row:2}.profit-chart-net{grid-column:2;grid-row:1;padding-inline-start:10px}.profit-chart-bar-row{grid-template-columns:58px minmax(60px,1fr) minmax(68px,auto);gap:7px}.company-form{grid-template-columns:repeat(2,minmax(0,1fr))}.company-form .company-save{align-items:flex-start;flex-direction:column}.user-edit-form{min-width:290px}.tenant-filter select{min-width:190px}}
+        @media(max-width:850px){.tenant-header{align-items:flex-start;padding:26px}.tenant-header-actions{justify-content:flex-start}.tenant-stats{grid-template-columns:repeat(3,minmax(120px,1fr))}}
+        @media(max-width:600px){.tenant-header{display:grid;gap:20px;padding:21px;border-radius:17px}.tenant-header p{font-size:13px}.tenant-header-actions a{flex:1}.tenant-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.tenant-stat{min-height:102px;padding:14px}.tenant-stat strong{font-size:25px}.tenant-card{padding:16px}.tenant-overview{gap:11px}.recent-user{grid-template-columns:minmax(0,1fr) auto;gap:8px}.recent-user-company{display:none}.company-permissions-grid{grid-template-columns:1fr}.company-permissions-head{padding:13px}.company-permissions-summary{padding:12px 13px}.company-form{grid-template-columns:repeat(2,minmax(0,1fr))}.company-form .company-save{align-items:flex-start;flex-direction:column}.user-edit-form{min-width:290px}.tenant-filter select{min-width:190px}}
     </style>
 <main class="tenant-page">
     @php
@@ -259,53 +267,106 @@
     <section class="tenant-overview" id="overview" aria-label="{{ __('نظرة عامة') }}">
         <article class="tenant-card">
             <div class="tenant-card-heading">
-                <div><h2>{{ __('الأداء المالي لكل شركة') }}</h2><p>{{ __('مقارنة الإيرادات والمصروفات وصافي الربح التراكمي من القيود المرحلة') }}</p></div>
-                <a class="tenant-card-link" href="{{ route('superadmin.tenants.index') }}">{{ __('إدارة الشركات ←') }}</a>
+                <div><h2>{{ __('صلاحيات المستخدمين') }}</h2><p>{{ __('مدير الشركة') }} · {{ __('الصلاحيات') }} · {{ __('الإجراءات') }}</p></div>
+                <a class="tenant-card-link" href="{{ route('superadmin.permissions.index') }}">{{ __('صلاحيات المستخدمين') }} ←</a>
             </div>
-            <div class="profit-chart-legend" aria-label="{{ __('مفتاح الرسم البياني') }}">
-                <span><i></i>{{ __('الإيرادات') }}</span>
-                <span><i class="expense-key"></i>{{ __('المصروفات') }}</span>
-            </div>
-            <div class="profit-chart" aria-label="{{ __('مقارنة الأداء المالي للشركات') }}">
-                @php
-                    $maxFinancialAmount = max(1, (float) $tenants->max(fn ($tenant) => max(abs($tenant->revenue_total), abs($tenant->expense_total))));
-                @endphp
+            <div class="company-permissions-grid">
                 @forelse($tenants as $tenant)
                     @php
-                        $revenueWidth = min(100, (int) round(abs($tenant->revenue_total) / $maxFinancialAmount * 100));
-                        $expenseWidth = min(100, (int) round(abs($tenant->expense_total) / $maxFinancialAmount * 100));
+                        $permissionMode = $tenant->permission_mode;
+                        $permissionModeLabel = [
+                            'full' => __('كاملة'),
+                            'managed' => __('محددة'),
+                            'none' => __('لا توجد'),
+                        ][$permissionMode] ?? __('غير محددة');
+                        $permissionEntries = collect(data_get($tenant, 'permission_modules', []))
+                            ->flatMap(function ($permissionModule) {
+                                $actions = collect(data_get($permissionModule, 'actions', []));
+
+                                if ($actions->isEmpty()) {
+                                    return [[
+                                        'label' => data_get($permissionModule, 'label'),
+                                        'module' => data_get($permissionModule, 'module'),
+                                        'action' => null,
+                                    ]];
+                                }
+
+                                return $actions->map(function ($action) use ($permissionModule) {
+                                    return [
+                                        'label' => data_get($permissionModule, 'label'),
+                                        'module' => data_get($permissionModule, 'module'),
+                                        'action' => $action,
+                                    ];
+                                })->values();
+                            })
+                            ->values();
+                        $permissionListId = 'tenant-permissions-'.$tenant->id;
+                        $visiblePermissionEntries = $permissionEntries->take(5);
+                        $hiddenPermissionEntries = $permissionEntries->slice(5);
                     @endphp
-                    <article class="profit-chart-item">
-                        <div class="profit-chart-company">
-                            <span class="profit-chart-name" title="{{ $tenant->name }}">{{ $tenant->name }}</span>
-                            <span class="profit-chart-meta">
-                                <span class="tenant-status {{ $tenant->status ? 'active' : 'suspended' }}">{{ $tenant->status ? __('نشطة') : __('موقوفة') }}</span>
-                                <span>{{ $tenant->users_count }} {{ __('مستخدم') }}</span>
-                            </span>
-                        </div>
-                        <div class="profit-chart-bars">
-                            <div class="profit-chart-bar-row">
-                                <span>{{ __('الإيرادات') }}</span>
-                                <div class="profit-chart-track" aria-label="{{ __('الإيرادات') }} {{ number_format($tenant->revenue_total, 2) }}">
-                                    <div class="profit-chart-bar {{ $tenant->revenue_total < 0 ? 'negative' : '' }}" style="width:{{ $revenueWidth }}%"></div>
-                                </div>
-                                <span class="profit-chart-amount">{{ number_format($tenant->revenue_total, 2) }}</span>
+                    <article class="company-permissions-item">
+                        <div class="company-permissions-head">
+                            <div class="company-permissions-identity">
+                                <span class="company-permissions-name" title="{{ $tenant->name }}">{{ $tenant->name }}</span>
+                                <span class="company-permissions-meta">
+                                    <span class="tenant-status {{ $tenant->status ? 'active' : 'suspended' }}">{{ $tenant->status ? __('نشطة') : __('موقوفة') }}</span>
+                                    <span class="company-permissions-count">{{ $tenant->users_count }} {{ __('مستخدم') }}</span>
+                                    <span class="company-permissions-count">{{ $tenant->admin_count }} {{ __('مدير الشركة') }}</span>
+                                    <span class="company-permissions-count">{{ $tenant->managed_admin_count }} {{ __('مدير') }} · {{ __('صلاحيات محددة') }}</span>
+                                </span>
                             </div>
-                            <div class="profit-chart-bar-row">
-                                <span>{{ __('المصروفات') }}</span>
-                                <div class="profit-chart-track" aria-label="{{ __('المصروفات') }} {{ number_format($tenant->expense_total, 2) }}">
-                                    <div class="profit-chart-bar expense {{ $tenant->expense_total < 0 ? 'negative' : '' }}" style="width:{{ $expenseWidth }}%"></div>
-                                </div>
-                                <span class="profit-chart-amount">{{ number_format($tenant->expense_total, 2) }}</span>
-                            </div>
+                            <span class="permission-mode {{ $permissionMode }}">{{ $permissionModeLabel }}</span>
                         </div>
-                        <div class="profit-chart-net {{ $tenant->net_profit >= 0 ? 'positive' : 'negative' }}">
-                            <small>{{ __('صافي الربح') }}</small>
-                            <strong>{{ number_format($tenant->net_profit, 2) }}</strong>
+                        <div class="company-permissions-summary">
+                            <div class="company-permissions-summary-head">
+                                <span>{{ __('الوحدات والإجراءات المصرح بها') }}</span>
+                                <strong>{{ $tenant->permission_count }} {{ __('الصلاحيات') }}</strong>
+                            </div>
+                            <div class="permission-modules">
+                                @forelse($visiblePermissionEntries as $permissionEntry)
+                                    <div class="permission-module">
+                                        <div class="permission-module-head">
+                                            <strong>{{ $permissionEntry['label'] }}</strong>
+                                            <span class="permission-module-key">{{ $permissionEntry['module'] }}</span>
+                                        </div>
+                                        <div class="permission-actions">
+                                            @if($permissionEntry['action'] !== null)
+                                                <span class="permission-action">{{ $permissionEntry['action'] }}</span>
+                                            @else
+                                                <span class="permission-action">{{ __('لا توجد') }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="permission-empty">{{ __('لا توجد صلاحيات مخصصة لهذه الشركة.') }}</div>
+                                @endforelse
+                            </div>
+                            @if($hiddenPermissionEntries->isNotEmpty())
+                                <div id="{{ $permissionListId }}" class="permission-modules" hidden>
+                                    @foreach($hiddenPermissionEntries as $permissionEntry)
+                                        <div class="permission-module">
+                                            <div class="permission-module-head">
+                                                <strong>{{ $permissionEntry['label'] }}</strong>
+                                                <span class="permission-module-key">{{ $permissionEntry['module'] }}</span>
+                                            </div>
+                                            <div class="permission-actions">
+                                                @if($permissionEntry['action'] !== null)
+                                                    <span class="permission-action">{{ $permissionEntry['action'] }}</span>
+                                                @else
+                                                    <span class="permission-action">{{ __('لا توجد') }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <button type="button" class="permission-toggle" data-permission-target="{{ $permissionListId }}" data-show-all="{{ __('عرض الكل') }} (+{{ $hiddenPermissionEntries->count() }})" data-show-less="{{ __('عرض أقل') }}" aria-controls="{{ $permissionListId }}" aria-expanded="false">
+                                    {{ __('عرض الكل') }} (+{{ $hiddenPermissionEntries->count() }})
+                                </button>
+                            @endif
                         </div>
                     </article>
                 @empty
-                    <div class="empty-note">{{ __('لا توجد شركات لعرض أرباحها.') }}</div>
+                    <div class="empty-note">{{ __('لا توجد شركات') }}</div>
                 @endforelse
             </div>
         </article>
@@ -650,6 +711,17 @@
             const companyCards = [...document.querySelectorAll('[data-api-company-card]')];
             const noCompanyResults = document.getElementById('api-company-no-results');
             const filterCount = document.getElementById('api-filter-count');
+            document.querySelectorAll('[data-permission-target]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const target = document.getElementById(button.dataset.permissionTarget);
+                    if (!target) return;
+
+                    const expanded = target.hidden;
+                    target.hidden = !expanded;
+                    button.setAttribute('aria-expanded', String(expanded));
+                    button.textContent = expanded ? button.dataset.showLess : button.dataset.showAll;
+                });
+            });
             const updateCompanyFilter = () => {
                 if (!companyFilter) return;
                 const query = companyFilter.value.trim().toLocaleLowerCase();

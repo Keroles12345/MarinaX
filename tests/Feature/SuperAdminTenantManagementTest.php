@@ -207,10 +207,9 @@ class SuperAdminTenantManagementTest extends TestCase
                 && $users->first()->status === true);
     }
 
-    public function test_dashboard_shows_each_company_profit_from_posted_entries_only(): void
+    public function test_dashboard_shows_tenant_permissions_instead_of_financial_performance(): void
     {
-        $firstTenant = Tenant::query()->create(['name' => 'Profitable Company', 'status' => true]);
-        $secondTenant = Tenant::query()->create(['name' => 'Loss-making Company', 'status' => true]);
+        $tenant = Tenant::query()->create(['name' => 'Dashboard Test Company', 'status' => true]);
         $superAdmin = User::withoutGlobalScopes()->create([
             'name' => 'Platform Admin',
             'username' => 'platform-admin',
@@ -220,67 +219,17 @@ class SuperAdminTenantManagementTest extends TestCase
             'status' => true,
             'is_super_admin' => true,
         ]);
-        $accounts = [];
-        foreach ([
-            [$firstTenant->id, 'إيرادات', '4101'],
-            [$firstTenant->id, 'مصروفات', '5101'],
-            [$secondTenant->id, 'إيرادات', '4101'],
-            [$secondTenant->id, 'مصروفات', '5101'],
-        ] as [$tenantId, $type, $number]) {
-            $accounts[] = DB::table('accounts')->insertGetId([
-                'tenant_id' => $tenantId,
-                'acc_no' => $number,
-                'name' => $type,
-                'type' => $type,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        $entries = [];
-        foreach ([
-            [$firstTenant->id, 'posted'],
-            [$firstTenant->id, 'posted'],
-            [$firstTenant->id, 'draft'],
-            [$secondTenant->id, 'posted'],
-            [$secondTenant->id, 'posted'],
-        ] as $index => [$tenantId, $status]) {
-            $entries[] = DB::table('journal_entries')->insertGetId([
-                'tenant_id' => $tenantId,
-                'movement_no' => 'PROFIT-'.$index,
-                'entry_date' => today()->toDateString(),
-                'status' => $status,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        DB::table('journal_lines')->insert([
-            ['tenant_id' => $firstTenant->id, 'entry_id' => $entries[0], 'account_id' => $accounts[0], 'debit' => 0, 'credit' => 100],
-            ['tenant_id' => $firstTenant->id, 'entry_id' => $entries[1], 'account_id' => $accounts[1], 'debit' => 20, 'credit' => 0],
-            ['tenant_id' => $firstTenant->id, 'entry_id' => $entries[2], 'account_id' => $accounts[0], 'debit' => 0, 'credit' => 900],
-            ['tenant_id' => $secondTenant->id, 'entry_id' => $entries[3], 'account_id' => $accounts[2], 'debit' => 0, 'credit' => 50],
-            ['tenant_id' => $secondTenant->id, 'entry_id' => $entries[4], 'account_id' => $accounts[3], 'debit' => 75, 'credit' => 0],
-        ]);
 
         $this->actingAs($superAdmin, 'superadmin')
             ->get(route('superadmin.dashboard'))
             ->assertOk()
-            ->assertSee('<html lang="ar" dir="rtl">', false)
-            ->assertSee('صافي الربح')
-            ->assertSee('الأداء المالي لكل شركة')
-            ->assertDontSee('ملخص الشركات المالي')
-            ->assertSee('أحدث الموظفين والمستخدمين')
-            ->assertSeeInOrder(['الأداء المالي لكل شركة', 'أحدث الموظفين والمستخدمين'])
-            ->assertViewHas('tenants', fn ($tenants) => $tenants->firstWhere('id', $firstTenant->id)->net_profit === 80.0
-                && $tenants->firstWhere('id', $secondTenant->id)->net_profit === -25.0)
-            ->assertSee('80.00')
-            ->assertSee('-25.00');
-
-        $this->withSession(['locale' => 'en'])
-            ->actingAs($superAdmin, 'superadmin')
-            ->get(route('superadmin.dashboard'))
-            ->assertOk()
-            ->assertSee('<html lang="en" dir="ltr">', false)
-            ->assertSee('Financial Performance by Company');
+            ->assertSee('صلاحيات المستخدمين')
+            ->assertSee('الوحدات والإجراءات المصرح بها')
+            ->assertSee('Dashboard Test Company')
+            ->assertDontSee('الأداء المالي لكل شركة')
+            ->assertDontSee('صافي الربح')
+            ->assertDontSee('الإيرادات')
+            ->assertDontSee('المصروفات');
     }
 
     public function test_new_tenant_gets_a_booking_company_record(): void
