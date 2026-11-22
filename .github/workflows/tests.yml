@@ -29,6 +29,9 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
+      - name: Audit Composer dependencies
+        run: composer audit --no-interaction
+
       - name: Run Laravel tests
         run: php artisan test
 
