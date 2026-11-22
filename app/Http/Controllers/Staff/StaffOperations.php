@@ -770,7 +770,7 @@ class StaffOperations extends Controller
     public function ticketPdf(Ticket $ticket)
     {
         $ticket->load('operation');
-        $linkUrl = route('operation.ticket', $ticket->id);
+        $linkUrl = route('operation.ticket', $ticket->token);
         $render = new Svg;
         $render->setWidth(200);
         $render->setHeight(200);
@@ -780,8 +780,11 @@ class StaffOperations extends Controller
         return $pdf->download($ticket->ticket_code.'.pdf');
     }
 
-    public function showTicket(Ticket $ticket)
+    public function showTicket(string $token)
     {
+        $ticket = Ticket::query()
+            ->where('token', $token)
+            ->firstOrFail();
         $ticket->load('operation');
 
         if (
@@ -801,7 +804,7 @@ class StaffOperations extends Controller
 
         $qrCode = base64_encode(
             (new Writer($renderer))->writeString(
-                route('operation.ticket', $ticket)
+                route('operation.ticket', $ticket->token)
             )
         );
 

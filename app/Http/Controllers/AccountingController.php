@@ -22,6 +22,8 @@ use OpenSpout\Writer\XLSX\Writer;
 
 class AccountingController extends Controller
 {
+    private const BACKUP_TABLES = ['users', 'accounts', 'regions', 'journal_entries', 'journal_lines', 'settings', 'audit_log', 'employee_custody_deposits'];
+
     private const ENTRY_TYPES = ['عادي', 'تسوية', 'افتتاحي', 'إقفال'];
 
     private const ACCOUNT_TYPES = ['أصول', 'خصوم', 'حقوق ملكية', 'إيرادات', 'مصروفات', 'أخرى'];
@@ -1804,6 +1806,7 @@ class AccountingController extends Controller
 
     public function createBackup(): JsonResponse
     {
+        $this->tenantBackupDirectory();
         $name = 'manual-'.now()->format('Y-m-d_His').'.json';
         $this->storeBackup($name);
         $this->audit(Auth::user()->name, 'نسخة احتياطية يدوية', $name);
@@ -1813,7 +1816,8 @@ class AccountingController extends Controller
 
     public function backups(): JsonResponse
     {
-        $files = collect(Storage::disk('local')->files('backups'))
+        $directory = $this->tenantBackupDirectory();
+        $files = collect(Storage::disk('local')->files($directory))
             ->filter(fn ($file) => preg_match('/^(manual|auto)-[A-Za-z0-9_.-]+\.json$/', basename($file)))
             ->map(fn ($file) => [
                 'name' => basename($file),
@@ -1836,9 +1840,9 @@ class AccountingController extends Controller
     {
         $path = $this->backupStoragePath($name);
         abort_unless(Storage::disk('local')->exists($path), 404);
+        $snapshot = $this->decodeBackupSnapshot(Storage::disk('local')->get($path));
         $this->storeBackup('auto-'.now()->format('Y-m-d_His').'.json');
-        $contents = Storage::disk('local')->get($path);
-        $this->restoreSnapshot($contents);
+        $this->restoreSnapshot($snapshot);
         $this->audit(Auth::user()->name, 'استعادة نسخة احتياطية', $name);
 
         return response()->json(['ok' => true, 'message' => 'تمت الاستعادة بنجاح']);
@@ -1846,10 +1850,12 @@ class AccountingController extends Controller
 
     public function restoreUploadedBackup(Request $request): JsonResponse
     {
+        $this->tenantBackupDirectory();
         $request->validate(['file' => ['required', 'file', 'mimes:json,txt', 'max:51200']]);
         $contents = file_get_contents($request->file('file')->getRealPath());
+        $snapshot = $this->decodeBackupSnapshot($contents);
         $this->storeBackup('auto-'.now()->format('Y-m-d_His').'.json');
-        $this->restoreSnapshot($contents);
+        $this->restoreSnapshot($snapshot);
         $this->audit(Auth::user()->name, 'استعادة نسخة من ملف مرفوع', $request->file('file')->getClientOriginalName());
 
         return response()->json(['ok' => true, 'message' => 'تمت الاستعادة بنجاح']);
@@ -1859,19 +1865,27 @@ class AccountingController extends Controller
     {
         abort_unless(preg_match('/^(manual|auto)-[A-Za-z0-9_.-]+\.json$/', $name), 400);
 
-        return 'backups/'.$name;
+        return $this->tenantBackupDirectory().'/'.$name;
     }
 
+    private function tenantBackupDirectory(): string
+    {
+        $tenantId = TenantContext::id();
+        abort_unless(TenantContext::isInitialized() && $tenantId !== null, 403, 'تعذر تحديد الشركة الحالية');
+
+        return 'backups/tenants/'.$tenantId;
+    }
 
     private function storeBackup(string $name): void
     {
-        $tables = ['users', 'accounts', 'regions', 'journal_entries', 'journal_lines', 'settings', 'audit_log', 'employee_custody_deposits'];
+        $directory = $this->tenantBackupDirectory();
         $snapshot = ['format' => 'smartaccounting-mysql-v1', 'created_at' => now()->toIso8601String(), 'tables' => []];
-        foreach ($tables as $table) {
+        foreach (self::BACKUP_TABLES as $table) {
             $snapshot['tables'][$table] = \App\Support\TenantDatabase::table($table)->get()->map(fn ($row) => (array) $row)->all();
         }
-        Storage::disk('local')->put('backups/'.$name, json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
-        $files = collect(Storage::disk('local')->files('backups'))
+        Storage::disk('local')->put($directory.'/'.$name, json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        $files = collect(Storage::disk('local')->files($directory))
+            ->filter(fn ($file) => preg_match('/^(manual|auto)-[A-Za-z0-9_.-]+\.json$/', basename($file)))
             ->sortByDesc(fn ($file) => Storage::disk('local')->lastModified($file))
             ->values();
         foreach ($files->slice(24) as $oldFile) {
@@ -1879,7 +1893,7 @@ class AccountingController extends Controller
         }
     }
 
-    private function restoreSnapshot(string $contents): void
+    private function decodeBackupSnapshot(string $contents): array
     {
         try {
             $snapshot = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
@@ -1889,15 +1903,29 @@ class AccountingController extends Controller
         if (($snapshot['format'] ?? null) !== 'smartaccounting-mysql-v1' || ! is_array($snapshot['tables'] ?? null)) {
             throw ValidationException::withMessages(['file' => 'تنسيق النسخة غير مدعوم']);
         }
-        $tables = ['users', 'accounts', 'regions', 'journal_entries', 'journal_lines', 'settings', 'audit_log', 'employee_custody_deposits'];
-        foreach ($tables as $table) {
+        foreach (self::BACKUP_TABLES as $table) {
             if ($table === 'employee_custody_deposits' && ! array_key_exists($table, $snapshot['tables'])) {
                 $snapshot['tables'][$table] = [];
             }
             if (! is_array($snapshot['tables'][$table] ?? null)) {
                 throw ValidationException::withMessages(['file' => "النسخة لا تحتوي جدول {$table}"]);
             }
+            foreach ($snapshot['tables'][$table] as $row) {
+                if (! is_array($row)) {
+                    throw ValidationException::withMessages(['file' => 'بيانات النسخة غير صالحة']);
+                }
+                if (isset($row['tenant_id']) && ! in_array($row['tenant_id'], [TenantContext::id(), (string) TenantContext::id()], true)) {
+                    throw ValidationException::withMessages(['file' => 'لا يمكن استعادة نسخة تخص شركة أخرى']);
+                }
+            }
         }
+
+        return $snapshot;
+    }
+
+    private function restoreSnapshot(array $snapshot): void
+    {
+        $tables = self::BACKUP_TABLES;
         DB::transaction(function () use ($tables, $snapshot) {
             foreach (['employee_custody_deposits', 'journal_lines', 'journal_entries', 'accounts', 'regions', 'settings', 'audit_log', 'users'] as $table) {
                 \App\Support\TenantDatabase::table($table)->delete();

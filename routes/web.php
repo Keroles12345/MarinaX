@@ -11,6 +11,7 @@ use App\Http\Controllers\OperationAssignmentController;
 use App\Http\Controllers\EmployeeCustodyController;
 use App\Http\Controllers\BoatRevenueController;
 use App\Http\Controllers\VehicleRevenueController;
+use App\Http\Middleware\PublicTicketTenantContext;
 use App\Http\Middleware\StaffOperationsMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AccountingController;
@@ -93,7 +94,8 @@ Route::post('/daily-ops/save', [DailyOpsController::class, 'save'])->name('daily
 Route::post('/print/save', [StaffController::class, 'showPrint'])->name('print.save');
     });
 
-Route::get('/ticket/{ticket}', [StaffOperations::class, 'showTicket'])
+Route::get('/ticket/{token}', [StaffOperations::class, 'showTicket'])
+    ->middleware(PublicTicketTenantContext::class)
     ->name('operation.ticket');
 
 
