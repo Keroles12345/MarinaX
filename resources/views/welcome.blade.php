@@ -474,6 +474,10 @@
             from { opacity: 0; transform: translateY(28px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes marina-slide-in {
+            from { opacity: 0; transform: translateX(-14px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
         @keyframes marina-float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
@@ -512,6 +516,12 @@
         .preview { transition: transform .18s ease-out, box-shadow .35s ease; will-change: transform; }
         .preview-glow { animation: marina-pulse 5s ease-in-out infinite; }
         .preview-caption { animation: marina-float 4.5s ease-in-out infinite; }
+        .metric { animation: marina-fade-up .65s cubic-bezier(.22,.75,.24,1) both; }
+        .metric:nth-child(2) { animation-delay: .12s; }
+        .metric:nth-child(3) { animation-delay: .24s; }
+        .trip-row { animation: marina-slide-in .55s cubic-bezier(.22,.75,.24,1) both; }
+        .trip-row:nth-of-type(3) { animation-delay: .18s; }
+        .trip-row:nth-of-type(4) { animation-delay: .3s; }
         .brand-mark { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
         .brand:hover .brand-mark { transform: rotate(-5deg) scale(1.05); border-color: rgba(217,164,65,.55); background: rgba(217,164,65,.12); }
         .nav-links a { position: relative; padding-block: 8px; }
