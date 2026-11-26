@@ -14,6 +14,14 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response
+            ->assertStatus(200)
+            ->assertSee('MarinaX')
+            ->assertSee('كل تفاصيل رحلتك')
+            ->assertSee('الحسابات والتقارير')
+            ->assertSee('تفاصيل أكثر، من أول برنامج إلى آخر تقرير')
+            ->assertSee('بوابات واضحة للأدوار المختلفة')
+            ->assertSee('استكشف توثيق واجهة API')
+            ->assertSee('إجابات سريعة وواضحة');
     }
 }

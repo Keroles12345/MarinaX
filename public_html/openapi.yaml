@@ -1,0 +1,588 @@
+openapi: 3.0.3
+info:
+  title: MarinaX Tenant Website API
+  version: 1.0.0
+  description: >
+    Tenant-isolated website API from routes/api.php. Internal
+    session-authenticated dashboard JSON routes are not part of this
+    specification. Use the tenant API key as an HTTP Bearer token.
+    Requests are limited to 60 per minute per client IP; booking creation is limited
+    to 10 per minute per client IP.
+servers:
+  - url: /api
+    description: Current MarinaX installation
+security:
+  - TenantApiKey: []
+tags:
+  - name: Documentation
+  - name: Trips
+  - name: Companies
+  - name: Currencies
+  - name: Bookings
+  - name: Payments
+paths:
+  /documentation:
+    get:
+      tags: [Documentation]
+      summary: Open interactive API documentation
+      security: []
+      responses:
+        '200':
+          description: Swagger UI HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+  /openapi.yaml:
+    get:
+      tags: [Documentation]
+      summary: Download the OpenAPI contract
+      security: []
+      responses:
+        '200':
+          description: OpenAPI 3.0 YAML document
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /v1/trips:
+    get:
+      tags: [Trips]
+      summary: List active trips for the authenticated tenant
+      operationId: listTrips
+      responses:
+        '200':
+          description: Active trip catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Trip'
+              example:
+                data:
+                  - id: 12
+                    name: Island trip
+                    description: A full-day island tour
+                    time: '08:30'
+                    region: Red Sea
+                    includes: [Lunch]
+                    excludes: [Personal expenses]
+                    faqs:
+                      - question: What time does it start?
+                        answer: In the morning.
+                    primary_image: https://example.test/storage/trips/island.webp
+                    images: [https://example.test/storage/trips/island.webp]
+                    hotels: []
+                    prices:
+                      - company_id: 3
+                        company_name: Sea Tours
+                        currency_id: 1
+                        currency_code: EGP
+                        currency_symbol: E£
+                        price_adult: '100.00'
+                        price_child: '50.00'
+                        price_infant: '0.00'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /v1/trips/{trip}:
+    get:
+      tags: [Trips]
+      summary: Get an active trip
+      operationId: getTrip
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          description: Trip ID belonging to the authenticated tenant
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trip details
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Trip'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /v1/companies:
+    get:
+      tags: [Companies]
+      summary: List active companies for the authenticated tenant
+      operationId: listCompanies
+      responses:
+        '200':
+          description: Active companies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name]
+                      properties:
+                        id: { type: integer, example: 3 }
+                        name: { type: string, example: Sea Tours }
+                        email: { type: string, nullable: true, example: bookings@example.test }
+                        phone: { type: string, nullable: true, example: '+201000000000' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /v1/currencies:
+    get:
+      tags: [Currencies]
+      summary: List active currencies
+      operationId: listCurrencies
+      responses:
+        '200':
+          description: Active currencies ordered with the default currency first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, code, exchange_rate, is_default]
+                      properties:
+                        id: { type: integer, example: 1 }
+                        name: { type: string, example: Egyptian Pound }
+                        code: { type: string, example: EGP }
+                        symbol: { type: string, nullable: true, example: E£ }
+                        exchange_rate: { type: number, example: 1 }
+                        is_default: { type: boolean, example: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /v1/bookings:
+    post:
+      tags: [Bookings]
+      summary: Create a pending booking
+      operationId: createBooking
+      description: >
+        Prices are calculated server-side from the selected active trip, company,
+        and currency. This endpoint creates a pending booking only; it does not
+        charge a payment method or confirm the booking. It requires the
+        bookings:create scope. If Idempotency-Key is supplied,
+        retries with the same normalized payload return the original response;
+        reusing the key with a different payload returns 409.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: A client-generated key between 8 and 255 characters. Only an HMAC hash is stored.
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBooking'
+            example:
+              trip_id: 12
+              company_id: 3
+              currency_id: 1
+              trip_date: '2026-12-01'
+              customer:
+                name: Website Customer
+                email: customer@example.test
+                phone: '+201000000000'
+              adults: 2
+              children: 1
+              infants: 0
+              remarks: Window seats if available
+      responses:
+        '201':
+          description: Pending booking created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [booking_id, status, amount, currency]
+                    properties:
+                      booking_id: { type: string, example: WEB-261201-A1B2C3D4 }
+                      status: { type: string, enum: [pending], example: pending }
+                      amount: { type: string, example: '250.00' }
+                      currency: { type: string, example: EGP }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Invalid input, no passenger, or no configured price
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                validation:
+                  summary: Request validation failed
+                  value:
+                    message: The given data was invalid.
+                    errors:
+                      trip_date: [The trip date must be a date after or equal to today.]
+                pricing:
+                  summary: No configured trip price
+                  value:
+                    message: لا توجد أسعار مضبوطة لهذه الرحلة والشركة والعملة.
+        '409':
+          description: Idempotency key was reused with a different request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+              example:
+                message: تم استخدام Idempotency-Key سابقاً مع محتوى مختلف.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: No active tenant user is available to record the booking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+              example:
+                message: لا يوجد مستخدم نشط مرتبط بالشركة لتسجيل الحجز.
+  /v1/bookings/{booking}:
+    get:
+      tags: [Bookings]
+      summary: Read a tenant booking
+      description: Requires the bookings:read scope.
+      parameters:
+        - name: booking
+          in: path
+          required: true
+          description: Booking reference
+          schema: { type: string }
+      responses:
+        '200':
+          description: Booking status and financial summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      booking_id: { type: string }
+                      status: { type: string, enum: [pending, confirmed, paid, cancelled, refunded] }
+                      amount: { type: string }
+                      amount_paid: { type: string }
+                      amount_remaining: { type: string }
+                      payment_status: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/bookings/{booking}/status:
+    patch:
+      tags: [Bookings]
+      summary: Change a booking status
+      description: Requires bookings:manage. Allowed transitions are pending to confirmed/cancelled, confirmed to paid/cancelled, and paid to refunded. Paid/refunded transitions require matching recorded financial events.
+      parameters:
+        - name: booking
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [confirmed, paid, cancelled, refunded] }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Booking status updated and history recorded
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: Invalid transition or payment prerequisite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/bookings/{booking}/payments:
+    post:
+      tags: [Bookings]
+      summary: Request a payment-provider intent
+      description: Requires payments:create. Returns 503 until a real PaymentGateway adapter and provider configuration are installed. No card data is accepted or stored.
+      parameters:
+        - name: booking
+          in: path
+          required: true
+          schema: { type: string }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 255 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: number, minimum: 0, exclusiveMinimum: true }
+      responses:
+        '202': { description: Payment intent created by configured provider }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { description: Invalid amount or input }
+        '503': { description: No payment provider configured }
+  /v1/payments/{payment}/refund:
+    post:
+      tags: [Payments]
+      summary: Request a payment refund
+      description: Requires payments:refund. Refund results are reconciled through a signed webhook.
+      parameters:
+        - name: payment
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 255 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: number, minimum: 0, exclusiveMinimum: true }
+      responses:
+        '202': { description: Refund request accepted by configured provider }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { description: Invalid refund amount or payment status }
+        '503': { description: No payment provider configured }
+  /webhooks/payments/{provider}:
+    post:
+      tags: [Payments]
+      summary: Process a signed payment-provider webhook
+      description: Public provider callback protected by HMAC-SHA256 using PAYMENT_WEBHOOK_SECRET. Event IDs are idempotent and payloads are not written to logs.
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, example: generic }
+        - name: X-Payment-Signature
+          in: header
+          required: true
+          description: Lowercase hex HMAC-SHA256 of the exact request body.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, type, transaction_reference, amount]
+              properties:
+                event_id: { type: string, maxLength: 191 }
+                type: { type: string, enum: [payment.succeeded, payment.failed, payment.refunded] }
+                transaction_reference: { type: string, maxLength: 191 }
+                amount: { type: number, exclusiveMinimum: true }
+      responses:
+        '200': { description: Event processed or previously processed }
+        '401': { description: Invalid webhook signature }
+        '404': { description: Unknown provider transaction }
+        '409': { description: Event ID reused with a different payload }
+        '422': { description: Invalid webhook event or amount }
+        '503': { description: Webhook secret is not configured }
+components:
+  securitySchemes:
+    TenantApiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: mx_live_* tenant API key
+      description: Use the complete API key as a Bearer token. Never put it in a URL. Scopes are configured per key in Super Admin.
+  schemas:
+    Trip:
+      type: object
+      required: [id, name, includes, excludes, faqs, images, hotels, prices]
+      properties:
+        id: { type: integer, example: 12 }
+        name: { type: string, example: Island trip }
+        description: { type: string, nullable: true }
+        time: { type: string, nullable: true, example: '08:30' }
+        region: { type: string, nullable: true, example: Red Sea }
+        includes:
+          type: array
+          items: { type: string }
+        excludes:
+          type: array
+          items: { type: string }
+        faqs:
+          type: array
+          items:
+            type: object
+            properties:
+              question: { type: string }
+              answer: { type: string }
+        primary_image: { type: string, nullable: true, format: uri }
+        images:
+          type: array
+          items: { type: string, format: uri }
+        hotels:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string, nullable: true }
+              pickup_time: { type: string, nullable: true }
+        prices:
+          type: array
+          items:
+            type: object
+            properties:
+              company_id: { type: integer }
+              company_name: { type: string }
+              currency_id: { type: integer }
+              currency_code: { type: string }
+              currency_symbol: { type: string, nullable: true }
+              price_adult: { type: string }
+              price_child: { type: string }
+              price_infant: { type: string }
+    CreateBooking:
+      type: object
+      required: [trip_id, company_id, currency_id, trip_date, customer, adults, children, infants]
+      properties:
+        trip_id: { type: integer, minimum: 1 }
+        company_id: { type: integer, minimum: 1 }
+        currency_id: { type: integer, minimum: 1 }
+        hotel_id: { type: integer, nullable: true, minimum: 1 }
+        trip_date: { type: string, format: date, description: Today or a future date }
+        customer:
+          type: object
+          required: [name, phone]
+          properties:
+            name: { type: string, maxLength: 255 }
+            email: { type: string, format: email, maxLength: 255 }
+            phone: { type: string, maxLength: 50 }
+            address: { type: string, maxLength: 255 }
+        adults: { type: integer, minimum: 0, maximum: 100 }
+        children: { type: integer, minimum: 0, maximum: 100 }
+        infants: { type: integer, minimum: 0, maximum: 100 }
+        remarks: { type: string, maxLength: 2000 }
+      description: At least one of adults, children, or infants must be greater than zero.
+    MessageError:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/MessageError'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
+    TripError:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, example: مفتاح API غير صالح. }
+  responses:
+    Unauthorized:
+      description: Missing, invalid, or expired API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TripError'
+          examples:
+            invalid:
+              value: { message: مفتاح API غير صالح. }
+            expired:
+              value: { message: انتهت صلاحية مفتاح API. }
+    Forbidden:
+      description: Tenant is inactive or the API key does not have the required scope
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message]
+            properties:
+              message: { type: string }
+              required_scope: { type: string }
+          examples:
+            inactive_tenant:
+              value:
+                message: حساب الشركة موقوف.
+            insufficient_scope:
+              value:
+                message: مفتاح API لا يملك الصلاحية المطلوبة.
+                required_scope: trips:read
+    NotFound:
+      description: Resource not found in the authenticated tenant
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageError'
+          example:
+            message: No query results for model.
+    RateLimited:
+      description: Request rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageError'
+          example:
+            message: Too Many Attempts.

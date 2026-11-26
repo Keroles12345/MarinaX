@@ -10,9 +10,9 @@ class SetDashboardLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->session()->get('locale', 'ar');
+        $locale = $request->session()->get('locale', 'en');
         if (! in_array($locale, ['ar', 'en'], true)) {
-            $locale = 'ar';
+            $locale = 'en';
         }
 
         app()->setLocale($locale);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | Staradmin</title>
+    <title>دخول الإدارة | MarinaX</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -307,9 +307,10 @@
         .form-header h2 { font-size: 26px; }
     }
 </style>
+<link rel="stylesheet" href="{{ asset('css/login-pages.css') }}">
 </head>
-<body>
-    <div style="position:absolute;top:20px;right:20px;z-index:1">@include('shared.language-switcher')</div>
+<body class="auth-page">
+    <div class="auth-language-switcher">@include('shared.language-switcher')</div>
 
 <div class="login-wrapper">
 
@@ -317,16 +318,16 @@
     <div class="login-info">
 
         <div class="brand">
-            <div class="brand-icon">S</div>
-            <div class="brand-name">Staradmin</div>
+            <div class="brand-icon">M</div>
+            <div class="brand-name">Marina<span>X</span></div>
         </div>
 
         <div class="info-content">
-            <span class="badge">MANAGEMENT SYSTEM</span>
+            <span class="badge">MARINAX ADMIN WORKSPACE</span>
             <h1>Welcome<br>Back.</h1>
             <p>
-                Access your workspace, manage your tasks,
-                and stay connected with your team from one secure place.
+                Manage your company workspace, review operations,
+                and keep your team moving from one secure place.
             </p>
         </div>
 

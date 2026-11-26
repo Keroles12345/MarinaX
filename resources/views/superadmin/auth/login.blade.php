@@ -4,44 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>دخول سوبر فايزر</title>
-    <style>
-        *{box-sizing:border-box}
-        body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(140deg,#10213e,#1c477d);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#172033}
-        .login-card{width:min(100%,430px);padding:34px;background:#fff;border-radius:18px;box-shadow:0 22px 70px #07162b66}
-        .login-mark{display:grid;place-items:center;width:54px;height:54px;margin-bottom:18px;border-radius:15px;background:#e8f0fb;color:#194778;font-size:24px}
-        h1{margin:0;color:#17365d;font-size:25px}
-        .login-subtitle{margin:8px 0 24px;color:#65758b;line-height:1.7}
-        label{display:block;margin:14px 0 6px;color:#34445a;font-weight:650;font-size:14px}
-        input[type=email],input[type=password]{width:100%;padding:12px;border:1px solid #ccd6e3;border-radius:9px;font:inherit}
-        input:focus{outline:3px solid #d7e8fb;border-color:#3978b7}
-        .remember{display:flex;align-items:center;gap:8px;margin:16px 0;color:#596a80;font-size:14px}
-        button{width:100%;padding:12px;border:0;border-radius:9px;background:#205b97;color:white;font:inherit;font-weight:750;cursor:pointer}
-        button:hover{background:#174775}
-        .error{margin:8px 0;color:#b42318;font-size:13px}
-        .secure-note{margin-top:20px;padding-top:16px;border-top:1px solid #e8edf4;color:#7b8797;font-size:12px;text-align:center}
-    </style>
+    <title>دخول مدير النظام | MarinaX</title>
+    <link rel="stylesheet" href="{{ asset('css/login-pages.css') }}">
 </head>
-<body>
-<main class="login-card">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">@include('shared.language-switcher')</div>
-    <div class="login-mark" aria-hidden="true">◆</div>
-    <h1>دخول مدير النظام</h1>
-    <p class="login-subtitle">لوحة مستقلة لإدارة الشركات ومستخدمي النظام.</p>
-    <form method="post" action="{{ route('superadmin.login.handle') }}" autocomplete="on">
-        @csrf
-        <label for="email">البريد الإلكتروني</label>
-        <input id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="username" autofocus>
-        @error('email')<p class="error" role="alert">{{ $message }}</p>@enderror
-        @error('password')<p class="error" role="alert">{{ $message }}</p>@enderror
+<body class="auth-page">
+    <div class="auth-language-switcher">@include('shared.language-switcher')</div>
 
-        <label for="password">كلمة المرور</label>
-        <input id="password" name="password" type="password" required autocomplete="current-password">
+    <main class="login-wrapper">
+        <aside class="login-info">
+            <a class="brand" href="{{ url('/') }}" aria-label="MarinaX">
+                <span class="brand-icon" aria-hidden="true">M</span>
+                <span class="brand-name">Marina<span>X</span></span>
+            </a>
 
-        <label class="remember"><input type="checkbox" name="remember" value="1"> تذكرني على هذا الجهاز</label>
-        <button type="submit">تسجيل الدخول إلى سوبر فايزر</button>
-    </form>
-    <div class="secure-note">دخول مخصص لحسابات سوبر فايزر فقط</div>
-</main>
+            <div class="info-content">
+                <span class="badge">MARINAX PLATFORM</span>
+                <h1>إدارة مركزية<br>بكل أمان</h1>
+                <p>مساحة مخصصة لإدارة الشركات والمستخدمين وإعدادات المنصة من مكان واحد.</p>
+            </div>
+
+            <div class="features">
+                <div class="feature"><span class="feature-icon" aria-hidden="true">✓</span>إدارة الشركات المستأجرة</div>
+                <div class="feature"><span class="feature-icon" aria-hidden="true">✓</span>تنظيم المستخدمين والصلاحيات</div>
+                <div class="feature"><span class="feature-icon" aria-hidden="true">✓</span>وصول محمي ومخصص</div>
+            </div>
+        </aside>
+
+        <section class="login-form-container">
+            <div class="login-form">
+                <div class="form-header">
+                    <h2>دخول مدير النظام</h2>
+                    <p>سجّل الدخول إلى لوحة إدارة المنصة.</p>
+                </div>
+
+                @if ($errors->any())
+                    <div class="general-errors" role="alert">{{ $errors->first() }}</div>
+                @endif
+
+                <form method="post" action="{{ route('superadmin.login.handle') }}" autocomplete="on">
+                    @csrf
+
+                    <div class="form-group">
+                        <label for="email">البريد الإلكتروني</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon" aria-hidden="true">✉</span>
+                            <input class="form-input" id="email" name="email" type="email" value="{{ old('email') }}" placeholder="name@example.com" required autocomplete="username" autofocus>
+                        </div>
+                        @error('email')<p class="error-message" role="alert">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">كلمة المرور</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon" aria-hidden="true">🔒</span>
+                            <input class="form-input" id="password" name="password" type="password" placeholder="أدخل كلمة المرور" required autocomplete="current-password">
+                            <button class="password-toggle" id="togglePassword" type="button" aria-label="إظهار كلمة المرور" aria-controls="password">👁</button>
+                        </div>
+                        @error('password')<p class="error-message" role="alert">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="form-options">
+                        <label class="remember-me">
+                            <input type="checkbox" name="remember" value="1">
+                            تذكرني على هذا الجهاز
+                        </label>
+                    </div>
+
+                    <button class="login-button" id="loginButton" type="submit">
+                        <span id="buttonText">تسجيل الدخول</span>
+                        <span class="button-loader" id="buttonLoader" style="display:none">
+                            <span class="spinner" aria-hidden="true"></span>
+                            جارٍ تسجيل الدخول...
+                        </span>
+                    </button>
+                </form>
+
+                <div class="security-note">دخول مخصص لحسابات مدير النظام فقط</div>
+            </div>
+        </section>
+    </main>
+    <script>
+        const passwordInput = document.getElementById('password');
+        const passwordToggle = document.getElementById('togglePassword');
+        const loginForm = document.querySelector('.login-form form');
+        const loginButton = document.getElementById('loginButton');
+        const buttonText = document.getElementById('buttonText');
+        const buttonLoader = document.getElementById('buttonLoader');
+
+        passwordToggle.addEventListener('click', () => {
+            const isVisible = passwordInput.type === 'password';
+            passwordInput.type = isVisible ? 'text' : 'password';
+            passwordToggle.setAttribute('aria-label', isVisible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+        });
+
+        loginForm.addEventListener('submit', () => {
+            passwordInput.type = 'password';
+            loginButton.disabled = true;
+            buttonText.style.display = 'none';
+            buttonLoader.style.display = 'flex';
+        });
+    </script>
 </body>
 </html>

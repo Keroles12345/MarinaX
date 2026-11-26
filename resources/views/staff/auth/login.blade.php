@@ -5,11 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Login</title>
+    <title>Staff sign in | MarinaX</title>
 
 </head>
 
-<body>
+<body class="auth-page">
 
 <div class="login-wrapper">
 
@@ -18,18 +18,18 @@
 
         <div class="brand">
             <div class="brand-icon">
-                S
+                M
             </div>
 
             <div class="brand-name">
-                 Portal
+                 Marina<span>X</span>
             </div>
         </div>
 
         <div class="info-content">
 
             <span class="badge">
-                MANAGEMENT SYSTEM
+                MARINAX STAFF WORKSPACE
             </span>
 
             <h1>
@@ -411,6 +411,7 @@
 
 
 </style>
+<link rel="stylesheet" href="{{ asset('css/login-pages.css') }}">
 
     <!-- Right Side -->
     <div class="login-form-container">
@@ -512,7 +513,7 @@
 </div>
 
 <div class="form-group">
-    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+    <label class="remember-me">
         <input type="hidden" name="remember" value="0">
         <input type="checkbox" name="remember" value="1" {{ old('remember', true) ? 'checked' : '' }}>
         Remember me

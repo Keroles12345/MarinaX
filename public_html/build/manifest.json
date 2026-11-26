@@ -1,0 +1,45 @@
+{
+  "_auto-sRkgK8jz.js": {
+    "file": "assets/auto-sRkgK8jz.js",
+    "name": "auto"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-B7c9ThxM.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/js/admin-charts.js": {
+    "file": "assets/admin-charts-KxN5HIke.js",
+    "name": "admin-charts",
+    "src": "resources/js/admin-charts.js",
+    "isEntry": true,
+    "imports": [
+      "_auto-sRkgK8jz.js"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-NAOXKvFA.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/daily-ops.js": {
+    "file": "assets/daily-ops-BKOukW2q.js",
+    "name": "daily-ops",
+    "src": "resources/js/daily-ops.js",
+    "isEntry": true
+  },
+  "resources/js/staff-charts.js": {
+    "file": "assets/staff-charts-D8VZWPJE.js",
+    "name": "staff-charts",
+    "src": "resources/js/staff-charts.js",
+    "isEntry": true,
+    "imports": [
+      "_auto-sRkgK8jz.js"
+    ]
+  }
+}
